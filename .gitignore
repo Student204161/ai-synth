@@ -178,3 +178,4 @@ cython_debug/
 
 #dont store data on git, use gdrive instead.
 data/
+/data
