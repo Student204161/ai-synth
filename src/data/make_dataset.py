@@ -114,6 +114,8 @@ def create_video(input_midi: str,
         { "note": n.pitch, "start": n.start, "end": n.end}
         for n in midi_data.instruments[0].notes
     ]
+
+    
     print(f"Loaded {len(notes)} notes from MIDI file")
  
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -243,7 +245,7 @@ def create_video(input_midi: str,
     pbar.close()
  
     print("[Step 2/3] Rendering MIDI to audio with Timidity")
-    wav_path = Path('././data/processed/wavs/'+midi_save_name+'.wav')
+    wav_path = Path('././data/processed/wavs/'+midi_save_name+'.mp4')
     sound_file = os.path.join(Path.cwd(), wav_path)
     save_wav_cmd = f"timidity place1 -Ow --output-24bit -A120 -o place2"
     save_wav_cmd = save_wav_cmd.split()
