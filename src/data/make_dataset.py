@@ -39,6 +39,7 @@ if __name__ == '__main__':
         for file in files:
             if file.endswith('.mid'):
                 if count in sample_indx:
+                    print(f"Processing {root}/{file}")
 
                     #for each midi file, seperate the notes into 5 second intervals
 
@@ -74,7 +75,7 @@ if __name__ == '__main__':
                         seq_count+=1
 
                     #save segments as seperate midi files
-                    for i, segment in enumerate(segments):
+                    for i, segment in tqdm.tqdm(enumerate(segments)):
                         midi = pretty_midi.PrettyMIDI()
                         instrument = pretty_midi.Instrument(0)
                         for note in segment:
@@ -88,16 +89,17 @@ if __name__ == '__main__':
                         # if segment not empty, write to file
                         if len(instrument.notes) > 0:
                             midi.write(f"././data/processed/midi/{artist}--{file.split('.')[0]}_{i}.mid")
-                            create_video(
-                                input_midi=f"././data/processed/midi/{artist}--{file.split('.')[0]}_{i}.mid",
-                                image_width = 360,
-                                image_height = 32,
-                                fps = 60,
-                                end_t=5.0,
-                            )
+                            # create_video(
+                            #     input_midi=f"././data/processed/midi/{artist}--{file.split('.')[0]}_{i}.mid",
+                            #     image_width = 360,
+                            #     image_height = 32,
+                            #     fps = 60,
+                            #     end_t=5.0,
+                            # )
                             # also save piano roll matrix
                             #piano_roll = midi.get_piano_roll(fs=60)
             
                             #np.save(f"././data/processed/midi/{artist}--{file.split('.')[0]}_{i}.npy", piano_roll)
                 count += 1
+
 

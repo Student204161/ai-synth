@@ -100,7 +100,7 @@ def create_video(input_midi: str,
  
     # The 'notes' list will store each note played, with start and end
     # times in seconds.
-    print("Loading MIDI file:", input_midi)
+    #print("Loading MIDI file:", input_midi)
     midi_data = pretty_midi.PrettyMIDI(input_midi)
 
     notes = [
@@ -168,7 +168,7 @@ def create_video(input_midi: str,
     pixel_start = 0
     pixel_start_rounded = 0
  
-    print("[Step 1/3] Generating video frames from notes")
+    #print("[Step 1/3] Generating video frames from notes")
  
  
     pbar = tqdm.tqdm(total=end_t, desc='Creating video')
@@ -254,7 +254,7 @@ def create_video(input_midi: str,
 
 def count_files(path_to_raw_data):
     count = 0
-    for root, dirs, files in os.walk('path_to_raw_data'):
+    for root, dirs, files in os.walk(path_to_raw_data):
         for file in files:
             if file.endswith('.mid'):
                 count += 1
