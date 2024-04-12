@@ -177,5 +177,5 @@ cython_debug/
 #.idea/
 
 #dont store data on git, use gdrive instead.
-data/
-/data
+data/processed/
+data/raw/
