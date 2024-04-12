@@ -247,7 +247,7 @@ def create_video(input_midi: str,
     ffmpeg_cmd = f"ffmpeg -framerate {fps} -i ././data/preprocessed/frames/{midi_save_name}/frame%05d.png -i {input_midi.split('.')[0]}.wav -f lavfi -t 0.1 -i anullsrc -filter_complex [1]adelay=1000|1000[aud];[2][aud]amix -c:v libx264 -vf fps={fps} -pix_fmt yuv420p -y -strict -2 temp.mp4"
     print("> ffmpeg_cmd: ", ffmpeg_cmd)
     subprocess.call(ffmpeg_cmd.split())
-    remove temp.m4
+    #remove temp.m4
     os.remove("temp.mp4")
 
 
