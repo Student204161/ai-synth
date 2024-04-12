@@ -39,6 +39,7 @@ if __name__ == '__main__':
         for file in files:
             if file.endswith('.mid'):
                 if count in sample_indx:
+                    count += 1
 
                     #for each midi file, seperate the notes into 5 second intervals
 
@@ -98,5 +99,3 @@ if __name__ == '__main__':
                             # also save piano roll matrix
                             #piano_roll = midi.get_piano_roll(fs=60)
                             #np.save(f"././data/processed/midi/{artist}--{file.split('.')[0]}_{i}.npy", piano_roll)
-
-                count += 1

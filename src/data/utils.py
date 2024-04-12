@@ -230,25 +230,25 @@ def create_video(input_midi: str,
  
     pbar.close()
  
-    print("[Step 2/3] Rendering MIDI to audio with Timidity")
-    wav_path = Path('././data/processed/wavs/'+midi_save_name+'.mp4')
-    sound_file = os.path.join(Path.cwd(), wav_path)
-    save_wav_cmd = f"timidity place1 -Ow --output-24bit -A120 -o place2"
-    save_wav_cmd = save_wav_cmd.split()
-    save_wav_cmd[1], save_wav_cmd[-1] = input_midi, sound_file
-    subprocess.call(save_wav_cmd)
+    # print("[Step 2/3] Rendering MIDI to audio with Timidity")
+    # wav_path = Path('././data/processed/wavs/'+midi_save_name+'.mp4')
+    # sound_file = os.path.join(Path.cwd(), wav_path)
+    # save_wav_cmd = f"timidity place1 -Ow --output-24bit -A120 -o place2"
+    # save_wav_cmd = save_wav_cmd.split()
+    # save_wav_cmd[1], save_wav_cmd[-1] = input_midi, sound_file
+    # subprocess.call(save_wav_cmd)
  
 
-    print("Skipped - [Step 3/3] Rendering full video with ffmpeg")
-    #Running from a terminal, the long filter_complex argument needs to
-    #be in double-quotes, but the list form of subprocess.call requires
-    #_not_ double-quoting.
+    # print("Skipped - [Step 3/3] Rendering full video with ffmpeg")
+    # #Running from a terminal, the long filter_complex argument needs to
+    # #be in double-quotes, but the list form of subprocess.call requires
+    # #_not_ double-quoting.
     
-    ffmpeg_cmd = f"ffmpeg -framerate {fps} -i ././data/preprocessed/frames/{midi_save_name}/frame%05d.png -i {input_midi.split('.')[0]}.wav -f lavfi -t 0.1 -i anullsrc -filter_complex [1]adelay=1000|1000[aud];[2][aud]amix -c:v libx264 -vf fps={fps} -pix_fmt yuv420p -y -strict -2 temp.mp4"
-    print("> ffmpeg_cmd: ", ffmpeg_cmd)
-    subprocess.call(ffmpeg_cmd.split())
-    #remove temp.m4
-    os.remove("temp.mp4")
+    # ffmpeg_cmd = f"ffmpeg -framerate {fps} -i ././data/preprocessed/frames/{midi_save_name}/frame%05d.png -i {input_midi.split('.')[0]}.wav -f lavfi -t 0.1 -i anullsrc -filter_complex [1]adelay=1000|1000[aud];[2][aud]amix -c:v libx264 -vf fps={fps} -pix_fmt yuv420p -y -strict -2 temp.mp4"
+    # print("> ffmpeg_cmd: ", ffmpeg_cmd)
+    # subprocess.call(ffmpeg_cmd.split())
+    # #remove temp.m4
+    # os.remove("temp.mp4")
 
 
 
