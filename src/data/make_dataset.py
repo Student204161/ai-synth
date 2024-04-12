@@ -47,7 +47,7 @@ if __name__ == '__main__':
                     artist = root.split('\\')[-1]
 
                     notes = [
-                        { "note": n.pitch, "start": n.start, "end": n.end}
+                        { "note": n.pitch, "start": n.start, "end": n.end, "velocity": n.velocity}
                         for n in midi_data.instruments[0].notes
                     ]
 
@@ -55,7 +55,7 @@ if __name__ == '__main__':
                     # create list of midi file segments
                     segments = []
                     seq_count=0
-                    t1=0
+                    t1=0.0
                     while t1 < midi_data.get_end_time():
                         segment = []
                         t1, t2 = seq_count*segm_length, (seq_count+1)*segm_length
@@ -80,22 +80,25 @@ if __name__ == '__main__':
                         instrument = pretty_midi.Instrument(0)
                         for note in segment:
                             instrument.notes.append(pretty_midi.Note(
-                                velocity=100,
+                                velocity=note['velocity'],
                                 pitch=note['note'],
                                 start=note['start'],
                                 end=note['end']
                             ))
                         midi.instruments.append(instrument)
-                        # if segment not empty, write to file
-                        if len(instrument.notes) > 0:
+                        # if segment not empty and file doesn't exist, write to file
+                        if len(instrument.notes) > 0 and not Path(f"././data/processed/midi/{artist}--{file.split('.')[0]}_{i}.mid").exists():
+                            
+                            #since some songs have notes that 
+
                             midi.write(f"././data/processed/midi/{artist}--{file.split('.')[0]}_{i}.mid")
-                            # create_video(
-                            #     input_midi=f"././data/processed/midi/{artist}--{file.split('.')[0]}_{i}.mid",
-                            #     image_width = 360,
-                            #     image_height = 32,
-                            #     fps = 60,
-                            #     end_t=5.0,
-                            # )
+                            create_video(
+                                input_midi=f"././data/processed/midi/{artist}--{file.split('.')[0]}_{i}.mid",
+                                image_width = 360,
+                                image_height = 32,
+                                fps = 60,
+                                end_t=5.0,
+                            )
                             # also save piano roll matrix
                             #piano_roll = midi.get_piano_roll(fs=60)
             

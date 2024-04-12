@@ -179,3 +179,4 @@ cython_debug/
 #dont store data on git, use gdrive instead.
 data/processed/
 data/raw/
+data.zip
