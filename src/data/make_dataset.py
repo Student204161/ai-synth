@@ -16,7 +16,7 @@ import PIL
 import PIL.Image
 import numpy as np
 import tqdm
-from utils import create_video, count_files
+from utils import create_video, count_files, check_video_files
 from pathlib import Path
  
 
@@ -46,6 +46,7 @@ if __name__ == '__main__':
 
                     midi_data = pretty_midi.PrettyMIDI(os.path.join(root, file))
                     artist = root.split('\\')[-1] if os.name != "posix" else root.split('/')[-1]
+                    artist = artist.replace(' ','_')
 
                     notes = [
                         { "note": n.pitch, "start": n.start, "end": n.end, "velocity": n.velocity}
@@ -90,12 +91,12 @@ if __name__ == '__main__':
                             ))
                         midi.instruments.append(instrument)
                         # if segment not empty and file doesn't exist, write to file
-                        if len(instrument.notes) > 0:# and not Path(f"././data/processed/midi/{artist}--{file.split('.')[0]}_{i}.mid").exists():
+                        if len(instrument.notes) > 0 and not Path(f"././data/processed/midi/{artist}--{file.split('.')[0].replace(' ','_')}_{i}.mid").exists():
                             
 
-                            midi.write(f"././data/processed/midi/{artist}--{file.split('.')[0]}_{i}.mid")
+                            midi.write(f"././data/processed/midi/{artist}--{file.split('.')[0].replace(' ','_')}_{i}.mid")
                             create_video(
-                                input_midi=f"././data/processed/midi/{artist}--{file.split('.')[0]}_{i}.mid",
+                                input_midi=f"././data/processed/midi/{artist}--{file.split('.')[0].replace(' ','_')}_{i}.mid",
                                 image_width = 360,
                                 image_height = 32,
                                 fps = 60,
@@ -104,5 +105,7 @@ if __name__ == '__main__':
                             )
 
                 count += 1
+    
+    check_video_files('././data/processed/midi')
 
 

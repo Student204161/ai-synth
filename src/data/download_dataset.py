@@ -6,9 +6,9 @@ import zipfile
 
 def download_dataset():
 
-    # Download the dataset from the google drive link
-    url = 'https://drive.google.com/uc?id=1TlY35JiecHOZEYnQ0ZxcbTYDbFFPiNdy'
-    output = 'data.zip'
+    # Download the dataset from the google drive
+    url = 'https://drive.google.com/uc?id=1gT9DrBHVwP84KrWxHu5qpxyIA7xt_cF0'
+    output = 'data1.zip'
 
     if not os.path.exists(output):
         gdown.download(url, output, quiet=False)
@@ -21,7 +21,7 @@ def download_dataset():
         print('Dataset extracted successfully!')
 
     # Remove the zip file
-    os.remove('data.zip')
+    os.remove('data1.zip')
 
     print('Dataset downloaded and unzipped successfully!')
 

@@ -263,3 +263,18 @@ def count_files(path_to_raw_data):
             if file.endswith('.mid'):
                 count += 1
     return count
+
+
+#for all midi files, try see if there is a corresponding video file - for deleting midi files that couldn't be created frames for.
+def check_video_files(path_to_midi_data):
+    count = 0
+    for root, dirs, files in os.walk(path_to_midi_data):
+        for file in files:
+            if file.endswith('.mid'):
+                midi_save_name = file.split('.')[0]
+                if not os.path.exists(os.path.join('././data/processed/frames', midi_save_name)):
+                    count += 1
+                    print(f"Missing video file for {midi_save_name}. Deleting")
+                    os.remove(os.path.join(path_to_midi_data, file))
+
+    return count
