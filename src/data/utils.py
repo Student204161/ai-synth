@@ -71,8 +71,8 @@ def create_video(input_midi: str,
         pressed_key_color = [220, 10, 10], # lighter blue
         vertical_speed = 1/4, # Speed in main-image-heights per second
         fps = 100,
-        video_filename = "output.mp4",
-        end_t = 0.0
+        end_t = 0.0,
+        silence = 0.0
     ):
 
     midi_save_name = input_midi.split('/')[-1].split('.')[0]  #(str_list[0] + '~' + str_list[1]).split('.')[0]
@@ -102,12 +102,14 @@ def create_video(input_midi: str,
     # times in seconds.
     #print("Loading MIDI file:", input_midi)
     midi_data = pretty_midi.PrettyMIDI(input_midi)
-
+    
+    
     notes = [
         { "note": n.pitch, "start": n.start, "end": n.end}
         for n in midi_data.instruments[0].notes
     ]
 
+    
     
     print(f"Loaded {len(notes)} notes from MIDI file")
  
@@ -154,7 +156,7 @@ def create_video(input_midi: str,
     # Timidity (the old version that I have!) always starts the audio
     # at time = 0.  Add a second of silence to the start, and also
     # keep making frames for a second at the end:
-    frame_start = notes[0]["start"] 
+    frame_start = 0 #min(note["start"] for note in notes) - silence
     end_t = max(note["end"] for note in notes) if end_t == 0.0 else end_t  #### set as constant
  
     #first frame init to start conditions
@@ -187,14 +189,14 @@ def create_video(input_midi: str,
         pbar.set_description(f'Creating video [Frame count = {frame_ct}]')
        
         # # Copy most of the previous frame into the new frame:
-        # im_frame[pixel_increment:main_height, :] = im_frame[0:(main_height - pixel_increment), :]
-        # im_frame[0:pixel_increment, :] = im_lines[0:pixel_increment, :]
+        im_frame[pixel_increment:main_height, :] = im_frame[0:(main_height - pixel_increment), :]
+        im_frame[0:pixel_increment, :] = im_lines[0:pixel_increment, :]
         im_frame[key_start:white_key_end, :] = im_piano
         # Which keys need to be colored?
         # TODO(jxm): put notes in some data structure or something to make this much faster
         keys_to_color = []
         for note in notes:
-            if note["start"] <= frame_start <= note["end"]:
+            if (note["start"]) <= frame_start <= note["end"]:
                 keys_to_color.append(note["note"])
        
         # First color the white keys (this will cover some black-key pixels),
@@ -231,12 +233,12 @@ def create_video(input_midi: str,
     pbar.close()
  
     # print("[Step 2/3] Rendering MIDI to audio with Timidity")
-    # wav_path = Path('././data/processed/wavs/'+midi_save_name+'.mp4')
-    # sound_file = os.path.join(Path.cwd(), wav_path)
-    # save_wav_cmd = f"timidity place1 -Ow --output-24bit -A120 -o place2"
-    # save_wav_cmd = save_wav_cmd.split()
+    # wav_path = Path('././data/processed/wavs/'+midi_save_name+'.wav')
+    #sound_file = os.path.join(Path.cwd(), wav_path)
+    save_wav_cmd = f"timidity {input_midi} -Ow --preserve-silence --output-24bit -A120 -o temp.wav"
+    save_wav_cmd = save_wav_cmd.split()
     # save_wav_cmd[1], save_wav_cmd[-1] = input_midi, sound_file
-    # subprocess.call(save_wav_cmd)
+    subprocess.call(save_wav_cmd)
  
 
     # print("Skipped - [Step 3/3] Rendering full video with ffmpeg")
@@ -244,11 +246,13 @@ def create_video(input_midi: str,
     # #be in double-quotes, but the list form of subprocess.call requires
     # #_not_ double-quoting.
     
-    # ffmpeg_cmd = f"ffmpeg -framerate {fps} -i ././data/preprocessed/frames/{midi_save_name}/frame%05d.png -i {input_midi.split('.')[0]}.wav -f lavfi -t 0.1 -i anullsrc -filter_complex [1]adelay=1000|1000[aud];[2][aud]amix -c:v libx264 -vf fps={fps} -pix_fmt yuv420p -y -strict -2 temp.mp4"
-    # print("> ffmpeg_cmd: ", ffmpeg_cmd)
-    # subprocess.call(ffmpeg_cmd.split())
+    mp4_path = os.path.join( "././data/processed/videos", midi_save_name)
+
+    ffmpeg_cmd = f"ffmpeg -framerate {fps} -i {frames_folder}/frame%05d.png -i temp.wav -f lavfi -t {end_t} -i anullsrc -filter_complex [1]adelay={0}|{0}[aud];[2][aud]amix -c:v libx264 -vf fps={fps} -pix_fmt yuv420p -y -strict -2 {mp4_path}.mp4 "
+    print("> ffmpeg_cmd: ", ffmpeg_cmd)
+    subprocess.call(ffmpeg_cmd.split())
     # #remove temp.m4
-    # os.remove("temp.mp4")
+    os.remove("temp.wav")
 
 
 

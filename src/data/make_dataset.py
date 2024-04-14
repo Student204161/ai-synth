@@ -25,7 +25,8 @@ if __name__ == '__main__':
 
     if not os.path.exists('././data/processed/midi'):
         os.makedirs('././data/processed/midi')
-
+    if not os.path.exists('././data/processed/videos'):
+        os.makedirs('././data/processed/videos')
     N_tot = count_files('././data/raw')
 
     segm_length = 5 #in sec
@@ -44,14 +45,16 @@ if __name__ == '__main__':
                     #for each midi file, seperate the notes into 5 second intervals
 
                     midi_data = pretty_midi.PrettyMIDI(os.path.join(root, file))
-                    artist = root.split('\\')[-1]
+                    artist = root.split('\\')[-1] if os.name != "posix" else root.split('/')[-1]
 
                     notes = [
                         { "note": n.pitch, "start": n.start, "end": n.end, "velocity": n.velocity}
                         for n in midi_data.instruments[0].notes
                     ]
 
-
+                    #add 0.5 sec of silence in beginning and end. In case we work with frequency distr. & do fourier, we dont have to zero pad.
+                    #is buggy, so dont...
+                    silence = 0.0
                     # create list of midi file segments
                     segments = []
                     seq_count=0
@@ -66,8 +69,8 @@ if __name__ == '__main__':
                             add_note['end'] = min(note['end'], t2)
 
                             if t1 <= add_note['start'] <= t2 and t1 <= add_note['end'] <= t2:
-                                add_note['start'] -= t1
-                                add_note['end'] -= t1
+                                add_note['start'] -= (t1 + silence)
+                                add_note['end'] -= (t1 + silence)
 
                                 segment.append(add_note)
     
@@ -87,9 +90,8 @@ if __name__ == '__main__':
                             ))
                         midi.instruments.append(instrument)
                         # if segment not empty and file doesn't exist, write to file
-                        if len(instrument.notes) > 0 and not Path(f"././data/processed/midi/{artist}--{file.split('.')[0]}_{i}.mid").exists():
+                        if len(instrument.notes) > 0:# and not Path(f"././data/processed/midi/{artist}--{file.split('.')[0]}_{i}.mid").exists():
                             
-                            #since some songs have notes that 
 
                             midi.write(f"././data/processed/midi/{artist}--{file.split('.')[0]}_{i}.mid")
                             create_video(
@@ -97,12 +99,10 @@ if __name__ == '__main__':
                                 image_width = 360,
                                 image_height = 32,
                                 fps = 60,
-                                end_t=5.0,
+                                end_t=segm_length,
+                                silence=silence
                             )
-                            # also save piano roll matrix
-                            #piano_roll = midi.get_piano_roll(fs=60)
-            
-                            #np.save(f"././data/processed/midi/{artist}--{file.split('.')[0]}_{i}.npy", piano_roll)
+
                 count += 1
 
 
