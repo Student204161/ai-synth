@@ -46,10 +46,12 @@ def create_segment_midi(segment, start_time, end_time, tempo_changes, midi_data)
 if __name__ == '__main__':
     main_dir = 'data_sanity'
     processed_midi_dir = f'{main_dir}/processed/midi'
+    frames_dir = f'{main_dir}/processed/frames'
     raw_dir = f'{main_dir}/raw'
-    if not os.path.exists(processed_midi_dir):
-        os.makedirs(processed_midi_dir)
-
+    dirs = [processed_midi_dir, frames_dir, raw_dir]
+    for dir in dirs:
+        if not os.path.exists(dir):
+            os.makedirs(dir)
     N_tot = count_files(raw_dir)
 
     segm_length = 5 #in sec
@@ -124,7 +126,7 @@ if __name__ == '__main__':
                         midi.instruments.append(instrument)
 
                         # Build the file path and check if it needs to be written
-                        processed_midi_path = f"././data/processed/midi/{artist}--{file.split('.')[0].replace(' ','_')}_{i}.mid"
+                        processed_midi_path = f"{processed_midi_dir}/{artist}--{file.split('.')[0].replace(' ','_')}_{i}.mid"
                         if len(instrument.notes) > 0:
                             midi.write(processed_midi_path)
                             create_video(
@@ -133,7 +135,8 @@ if __name__ == '__main__':
                                 image_height=32,
                                 fps=60,
                                 end_t=segm_length,
-                                silence=silence
+                                silence=silence,
+                                data_dir=f"{main_dir}/processed/"
                             )
                             print(f"Saved to {processed_midi_path}")
                             # also save piano roll matrix
@@ -143,4 +146,4 @@ if __name__ == '__main__':
                         elif Path(processed_midi_path).exists():
                             print(f"File {processed_midi_path} already exists, skipping...")
                 count += 1
-    check_video_files(processed_midi_dir)
+    check_video_files(processed_midi_dir, frames_dir="././data_sanity/processed/frames")

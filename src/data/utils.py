@@ -74,13 +74,14 @@ def create_video(input_midi: str,
         end_t = 0.0,
         silence = 0.0,
         video_filename = None,
+        data_dir = '././data_sanity/processed'
     ):
 
     midi_save_name = input_midi.split('/')[-1].split('.')[0]  #(str_list[0] + '~' + str_list[1]).split('.')[0]
     print(f"midi save name = {midi_save_name}")
-    frames_folder = os.path.join( "././data_sanity/processed/frames", midi_save_name)
-    video_folder = "././data_sanity/processed/videos"
-    audio_folder = "././data_sanity/processed/audio"
+    frames_folder = os.path.join(f"{data_dir}/frames", midi_save_name)
+    video_folder = f"{data_dir}/videos"
+    audio_folder = f"{data_dir}/audio"
     video_filename = os.path.join(video_folder, f"{midi_save_name}.mp4") if video_filename is None else video_filename
     audio_filename = os.path.join(audio_folder, f"{midi_save_name}.wav")
     piano_height = image_height
@@ -264,7 +265,7 @@ def create_video(input_midi: str,
     
     # mp4_path = os.path.join( "././data/processed/videos", midi_save_name)
 
-    ffmpeg_cmd = f"ffmpeg -framerate {fps} -i {frames_folder}/frame%05d.png -i temp.wav -f lavfi -t {end_t} -i anullsrc -filter_complex [1]adelay={0}|{0}[aud];[2][aud]amix -c:v libx264 -vf fps={fps} -pix_fmt yuv420p -y -strict -2 {video_filename}.mp4 "
+    ffmpeg_cmd = f"ffmpeg -framerate {fps} -i {frames_folder}/frame%05d.png -i temp.wav -f lavfi -t {end_t} -i anullsrc -filter_complex [1]adelay={0}|{0}[aud];[2][aud]amix -c:v libx264 -vf fps={fps} -pix_fmt yuv420p -y -strict -2 {video_filename}"
     print("> ffmpeg_cmd: ", ffmpeg_cmd)
     subprocess.call(ffmpeg_cmd.split())
     # #remove temp.m4
@@ -287,13 +288,13 @@ def count_files(path_to_raw_data):
 
 
 #for all midi files, try see if there is a corresponding video file - for deleting midi files that couldn't be created frames for.
-def check_video_files(path_to_midi_data):
+def check_video_files(path_to_midi_data, frames_dir):
     count = 0
     for root, dirs, files in os.walk(path_to_midi_data):
         for file in files:
             if file.endswith('.mid'):
                 midi_save_name = file.split('.')[0]
-                if not os.path.exists(os.path.join('././data/processed/frames', midi_save_name)):
+                if not os.path.exists(os.path.join(frames_dir, midi_save_name)):
                     count += 1
                     print(f"Missing video file for {midi_save_name}. Deleting")
                     os.remove(os.path.join(path_to_midi_data, file))
