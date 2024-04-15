@@ -72,15 +72,20 @@ def create_video(input_midi: str,
         vertical_speed = 1/4, # Speed in main-image-heights per second
         fps = 100,
         end_t = 0.0,
-        silence = 0.0
+        silence = 0.0,
+        video_filename = None,
     ):
 
     midi_save_name = input_midi.split('/')[-1].split('.')[0]  #(str_list[0] + '~' + str_list[1]).split('.')[0]
-    frames_folder = os.path.join( "././data/processed/frames", midi_save_name)
+    print(f"midi save name = {midi_save_name}")
+    frames_folder = os.path.join( "././data_sanity/processed/frames", midi_save_name)
+    video_folder = "././data_sanity/processed/videos"
+    audio_folder = "././data_sanity/processed/audio"
+    video_filename = os.path.join(video_folder, f"{midi_save_name}.mp4") if video_filename is None else video_filename
+    audio_filename = os.path.join(audio_folder, f"{midi_save_name}.wav")
     piano_height = image_height
     main_height = image_height - piano_height
     pixels_per_frame = main_height*vertical_speed / fps # (pix/image) * (images/s) / (frames / s) =
- 
  
     note_names = {}
  
@@ -116,8 +121,10 @@ def create_video(input_midi: str,
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ~ The rest of the code is about making the video. ~
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  
-    if not os.path.isdir(frames_folder):
-        os.makedirs(frames_folder)
+    folders = [frames_folder, video_folder, audio_folder]
+    for folder in folders:
+        if not os.path.isdir(folder):
+            os.makedirs(folder)
        
     # Delete all previous image frames:
     for f in os.listdir(frames_folder):
@@ -238,21 +245,35 @@ def create_video(input_midi: str,
     save_wav_cmd = f"timidity {input_midi} -Ow --preserve-silence --output-24bit -A120 -o temp.wav"
     save_wav_cmd = save_wav_cmd.split()
     # save_wav_cmd[1], save_wav_cmd[-1] = input_midi, sound_file
+    # OLD BELOW
+    # print("[Step 2/3] Rendering MIDI to audio with Timidity")
+    # wav_path = Path(audio_filename)
+    # # sound_file = os.path.join(Path.cwd(), wav_path)
+    # sound_file = wav_path
+    # save_wav_cmd = f"timidity place1 -Ow --output-24bit -A120 -o place2"
+    # save_wav_cmd = save_wav_cmd.split()
+    # save_wav_cmd[1], save_wav_cmd[-1] = input_midi, sound_file
+
     subprocess.call(save_wav_cmd)
  
 
-    # print("Skipped - [Step 3/3] Rendering full video with ffmpeg")
-    # #Running from a terminal, the long filter_complex argument needs to
-    # #be in double-quotes, but the list form of subprocess.call requires
-    # #_not_ double-quoting.
+    print("Skipped - [Step 3/3] Rendering full video with ffmpeg")
+    # Running from a terminal, the long filter_complex argument needs to
+    # be in double-quotes, but the list form of subprocess.call requires
+    # _not_ double-quoting.
     
-    mp4_path = os.path.join( "././data/processed/videos", midi_save_name)
+    # mp4_path = os.path.join( "././data/processed/videos", midi_save_name)
 
-    ffmpeg_cmd = f"ffmpeg -framerate {fps} -i {frames_folder}/frame%05d.png -i temp.wav -f lavfi -t {end_t} -i anullsrc -filter_complex [1]adelay={0}|{0}[aud];[2][aud]amix -c:v libx264 -vf fps={fps} -pix_fmt yuv420p -y -strict -2 {mp4_path}.mp4 "
+    ffmpeg_cmd = f"ffmpeg -framerate {fps} -i {frames_folder}/frame%05d.png -i temp.wav -f lavfi -t {end_t} -i anullsrc -filter_complex [1]adelay={0}|{0}[aud];[2][aud]amix -c:v libx264 -vf fps={fps} -pix_fmt yuv420p -y -strict -2 {video_filename}.mp4 "
     print("> ffmpeg_cmd: ", ffmpeg_cmd)
     subprocess.call(ffmpeg_cmd.split())
     # #remove temp.m4
     os.remove("temp.wav")
+    
+    # OLD BELOW
+    # ffmpeg_cmd = f"ffmpeg -framerate {fps} -i {frames_folder}/frame%05d.png -i {sound_file} -f lavfi -t 0.1 -i anullsrc -filter_complex [1]adelay=1000|1000[aud];[2][aud]amix -c:v libx264 -vf fps={fps} -pix_fmt yuv420p -y -strict -2 {video_filename}"
+    # print("> ffmpeg_cmd: ", ffmpeg_cmd)
+    # subprocess.call(ffmpeg_cmd.split())
 
 
 

@@ -19,15 +19,38 @@ import tqdm
 from utils import create_video, count_files, check_video_files
 from pathlib import Path
  
+# Helper function to create a new MIDI file from a segment
+def create_segment_midi(segment, start_time, end_time, tempo_changes, midi_data):
+    # Create a new MIDI object
+    new_midi = pretty_midi.PrettyMIDI()
+    instrument = pretty_midi.Instrument(program=midi_data.instruments[0].program)
+    new_midi.instruments.append(instrument)
+    
+    # Add notes to the new instrument
+    for note in segment:
+        new_note = pretty_midi.Note(
+            velocity=note['velocity'],
+            pitch=note['note'],
+            start=note['start'] - start_time,
+            end=note['end'] - start_time
+        )
+        instrument.notes.append(new_note)
+    
+    # Handle tempo changes within the segment
+    for tempo, time in zip(*tempo_changes):
+        if start_time <= time <= end_time:
+            new_midi.add_tempo_change(tempo, time - start_time)
 
+    return new_midi
 
 if __name__ == '__main__':
+    main_dir = 'data_sanity'
+    processed_midi_dir = f'{main_dir}/processed/midi'
+    raw_dir = f'{main_dir}/raw'
+    if not os.path.exists(processed_midi_dir):
+        os.makedirs(processed_midi_dir)
 
-    if not os.path.exists('././data/processed/midi'):
-        os.makedirs('././data/processed/midi')
-    if not os.path.exists('././data/processed/videos'):
-        os.makedirs('././data/processed/videos')
-    N_tot = count_files('././data/raw')
+    N_tot = count_files(raw_dir)
 
     segm_length = 5 #in sec
     N = 100
@@ -36,13 +59,16 @@ if __name__ == '__main__':
 
     #for sampling across midi files in different folders
     count = 0
-    for root, dirs, files in os.walk('././data/raw'):
+    file_delim = os.path.sep
+    for root, dirs, files in os.walk(raw_dir):
+        print(f"in {raw_dir} found {len(files)} files with root {root} and dirs {dirs}")
         for file in files:
             if file.endswith('.mid'):
                 if count in sample_indx:
-                    print(f"Processing {root}/{file}")
+                    midi_data_path = os.path.join(root, file)
+                    print(f"Processing {midi_data_path}...")
 
-                    #for each midi file, seperate the notes into 5 second intervals
+                    # for each midi file, seperate the notes into 5 second intervals
 
                     midi_data = pretty_midi.PrettyMIDI(os.path.join(root, file))
                     artist = root.split('\\')[-1] if os.name != "posix" else root.split('/')[-1]
@@ -78,33 +104,43 @@ if __name__ == '__main__':
                         segments.append(segment)
                         seq_count+=1
 
-                    #save segments as seperate midi files
+                    # Example loop over segments
                     for i, segment in tqdm.tqdm(enumerate(segments)):
+                        # Create a new PrettyMIDI object
                         midi = pretty_midi.PrettyMIDI()
-                        instrument = pretty_midi.Instrument(0)
+                        instrument = pretty_midi.Instrument(program=0)  # Set the program if needed
+
+                        # Append notes to the instrument
                         for note in segment:
-                            instrument.notes.append(pretty_midi.Note(
+                            midi_note = pretty_midi.Note(
                                 velocity=note['velocity'],
                                 pitch=note['note'],
                                 start=note['start'],
                                 end=note['end']
-                            ))
+                            )
+                            instrument.notes.append(midi_note)
+                        
+                        # Add the instrument to the MIDI object
                         midi.instruments.append(instrument)
-                        # if segment not empty and file doesn't exist, write to file
-                        if len(instrument.notes) > 0 and not Path(f"././data/processed/midi/{artist}--{file.split('.')[0].replace(' ','_')}_{i}.mid").exists():
-                            
 
-                            midi.write(f"././data/processed/midi/{artist}--{file.split('.')[0].replace(' ','_')}_{i}.mid")
+                        # Build the file path and check if it needs to be written
+                        processed_midi_path = f"././data/processed/midi/{artist}--{file.split('.')[0].replace(' ','_')}_{i}.mid"
+                        if len(instrument.notes) > 0:
+                            midi.write(processed_midi_path)
                             create_video(
-                                input_midi=f"././data/processed/midi/{artist}--{file.split('.')[0].replace(' ','_')}_{i}.mid",
-                                image_width = 360,
-                                image_height = 32,
-                                fps = 60,
+                                input_midi=processed_midi_path,
+                                image_width=360,
+                                image_height=32,
+                                fps=60,
                                 end_t=segm_length,
                                 silence=silence
                             )
-
+                            print(f"Saved to {processed_midi_path}")
+                            # also save piano roll matrix
+                            #piano_roll = midi.get_piano_roll(fs=60)
+            
+                            #np.save(f"././data/processed/midi/{artist}--{file.split('.')[0]}_{i}.npy", piano_roll)
+                        elif Path(processed_midi_path).exists():
+                            print(f"File {processed_midi_path} already exists, skipping...")
                 count += 1
-    
-    check_video_files('././data/processed/midi')
-
+    check_video_files(processed_midi_dir)
