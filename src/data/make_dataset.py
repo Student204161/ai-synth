@@ -32,7 +32,7 @@ if __name__ == '__main__':
     N_tot = count_files('././data/raw')
 
     segm_length = 5 #in sec
-    N = 2
+    N = 10
     #linear space from 0 to N, with 100 points but integers
     sample_indx = np.linspace(0, N_tot, N, dtype=int)
 

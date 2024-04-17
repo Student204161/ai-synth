@@ -12,7 +12,7 @@ import numpy as np
 import tqdm
 import torch 
 from pathlib import Path
-
+import torchaudio
 
 accidentals = "flat"
 
@@ -234,8 +234,7 @@ def create_video(input_midi: str,
  
     # print("[Step 2/3] Rendering MIDI to audio with Timidity")
     wav_path = '././data/processed/wavs/'+midi_save_name+'.wav'
-    sound_file = os.path.join(Path.cwd(), wav_path)
-    save_wav_cmd = f"timidity {input_midi} -Ow --preserve-silence --output-24bit -A120 -o {wav_path}.wav"
+    save_wav_cmd = f"timidity {input_midi} -Ow --preserve-silence --output-24bit -A120 -o {wav_path}"
     save_wav_cmd = save_wav_cmd.split()
     # save_wav_cmd[1], save_wav_cmd[-1] = input_midi, sound_file
     subprocess.call(save_wav_cmd)
@@ -248,7 +247,7 @@ def create_video(input_midi: str,
      
     mp4_path = os.path.join( "././data/processed/videos", midi_save_name)
 
-    ffmpeg_cmd = f"ffmpeg -framerate {fps} -i {frames_folder}/frame%05d.png -i temp.wav -f lavfi -t {end_t} -i anullsrc -filter_complex [1]adelay={0}|{0}[aud];[2][aud]amix -c:v libx264 -vf fps={fps} -pix_fmt yuv420p -y -strict -2 {mp4_path}.mp4 "
+    ffmpeg_cmd = f"ffmpeg -framerate {fps} -i {frames_folder}/frame%05d.png -i {wav_path} -f lavfi -t {end_t} -i anullsrc -filter_complex [1]adelay={0}|{0}[aud];[2][aud]amix -c:v libx264 -vf fps={fps} -pix_fmt yuv420p -y -strict -2 {mp4_path}.mp4 "
     print("> ffmpeg_cmd: ", ffmpeg_cmd)
     subprocess.call(ffmpeg_cmd.split())
 
@@ -277,11 +276,31 @@ def check_video_files(path_to_midi_data):
 
     return count
 
+def pad_tensor(tensor, target_shape):
+    """
+    Pad a tensor to a target shape with zeros if necessary.
+    
+    Args:
+    - tensor: NumPy array, the input tensor
+    - target_shape: tuple, the target shape
+    
+    Returns:
+    - padded_tensor: Tensor
+    """
+    current_shape = tensor.shape
+    if current_shape[1] < target_shape[1]:
+        tensor = torch.nn.functional.pad(tensor, (0,target_shape[1] - current_shape[1]))
+    elif current_shape[1] > target_shape[1]:
+        tensor = tensor[:,:target_shape[1]]
+    return tensor
+
+
 
 # collect all frames into a torch.tensor .pt file of size (N,302,360,32,1)
 
-def save_to_pt(path_to_midi):
+def save_to_pt(path_to_midi, seq_len=5.0):
     all_frames = []
+    wavs = []
     for root, dirs, files in os.walk(path_to_midi):
         for file in tqdm.tqdm(files):
             if file.endswith('.mid'):
@@ -301,8 +320,17 @@ def save_to_pt(path_to_midi):
                         #to tensor
                         img_tensor = torch.from_numpy(img)
                         frames.append(img_tensor)
+
+                wav_file = '././data/processed/wavs/'+ file.split('.')[0] +".wav"
+                wav, _ = torchaudio.load(wav_file) # 44100 Hz all wavs.
+                target_len = int(44100*(seq_len+0.5))
+                wav = pad_tensor(wav, (2,target_len))
+                wavs.append(wav)
                 frames = torch.stack(frames)
                 all_frames.append(frames)
     all_frames = torch.stack(all_frames)
+    wavs = torch.stack(wavs)
     #save all frames to a .pt file
     torch.save(all_frames, '././data/processed/frames.pt')
+    torch.save(wavs, '././data/processed/wavs.pt')
+    
