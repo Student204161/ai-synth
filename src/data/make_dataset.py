@@ -16,7 +16,7 @@ import PIL
 import PIL.Image
 import numpy as np
 import tqdm
-from utils import create_video, count_files, check_video_files
+from utils import create_video, count_files, check_video_files, save_to_pt
 from pathlib import Path
  
 
@@ -27,10 +27,12 @@ if __name__ == '__main__':
         os.makedirs('././data/processed/midi')
     if not os.path.exists('././data/processed/videos'):
         os.makedirs('././data/processed/videos')
+    if not os.path.exists('././data/processed/wavs'):
+        os.makedirs('././data/processed/wavs')
     N_tot = count_files('././data/raw')
 
     segm_length = 5 #in sec
-    N = 100
+    N = 2
     #linear space from 0 to N, with 100 points but integers
     sample_indx = np.linspace(0, N_tot, N, dtype=int)
 
@@ -107,5 +109,7 @@ if __name__ == '__main__':
                 count += 1
     
     check_video_files('././data/processed/midi')
+
+    save_to_pt('././data/processed/midi')
 
 

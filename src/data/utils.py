@@ -10,7 +10,7 @@ import PIL
 import PIL.Image
 import numpy as np
 import tqdm
- 
+import torch 
 from pathlib import Path
 
 
@@ -64,7 +64,7 @@ def pixel_range(midi_note, image_width):
     return [start_pixel, end_pixel]
  
 def create_video(input_midi: str,
-        image_width = 360,
+        image_width = 240,
         image_height = 32,
         black_key_height = 2/3,
         falling_note_color = [75, 105, 177],     # darker blue
@@ -233,9 +233,9 @@ def create_video(input_midi: str,
     pbar.close()
  
     # print("[Step 2/3] Rendering MIDI to audio with Timidity")
-    # wav_path = Path('././data/processed/wavs/'+midi_save_name+'.wav')
-    #sound_file = os.path.join(Path.cwd(), wav_path)
-    save_wav_cmd = f"timidity {input_midi} -Ow --preserve-silence --output-24bit -A120 -o temp.wav"
+    wav_path = '././data/processed/wavs/'+midi_save_name+'.wav'
+    sound_file = os.path.join(Path.cwd(), wav_path)
+    save_wav_cmd = f"timidity {input_midi} -Ow --preserve-silence --output-24bit -A120 -o {wav_path}.wav"
     save_wav_cmd = save_wav_cmd.split()
     # save_wav_cmd[1], save_wav_cmd[-1] = input_midi, sound_file
     subprocess.call(save_wav_cmd)
@@ -245,14 +245,12 @@ def create_video(input_midi: str,
     # #Running from a terminal, the long filter_complex argument needs to
     # #be in double-quotes, but the list form of subprocess.call requires
     # #_not_ double-quoting.
-    
+     
     mp4_path = os.path.join( "././data/processed/videos", midi_save_name)
 
     ffmpeg_cmd = f"ffmpeg -framerate {fps} -i {frames_folder}/frame%05d.png -i temp.wav -f lavfi -t {end_t} -i anullsrc -filter_complex [1]adelay={0}|{0}[aud];[2][aud]amix -c:v libx264 -vf fps={fps} -pix_fmt yuv420p -y -strict -2 {mp4_path}.mp4 "
     print("> ffmpeg_cmd: ", ffmpeg_cmd)
     subprocess.call(ffmpeg_cmd.split())
-    # #remove temp.m4
-    os.remove("temp.wav")
 
 
 
@@ -278,3 +276,33 @@ def check_video_files(path_to_midi_data):
                     os.remove(os.path.join(path_to_midi_data, file))
 
     return count
+
+
+# collect all frames into a torch.tensor .pt file of size (N,302,360,32,1)
+
+def save_to_pt(path_to_midi):
+    all_frames = []
+    for root, dirs, files in os.walk(path_to_midi):
+        for file in tqdm.tqdm(files):
+            if file.endswith('.mid'):
+
+                frames_folder = '././data/processed/frames/'+ file.split('.')[0]
+
+                frames = []
+                for img_file in os.listdir(frames_folder):
+                    if img_file.endswith('.png'):
+                        img_path = os.path.join(frames_folder, img_file)
+                        #load img
+                        img = PIL.Image.open(img_path)
+                        #to numpy
+                        img = np.array(img)
+                        # to grey scale
+                        img = img[:,:,0]
+                        #to tensor
+                        img_tensor = torch.from_numpy(img)
+                        frames.append(img_tensor)
+                frames = torch.stack(frames)
+                all_frames.append(frames)
+    all_frames = torch.stack(all_frames)
+    #save all frames to a .pt file
+    torch.save(all_frames, '././data/processed/frames.pt')
