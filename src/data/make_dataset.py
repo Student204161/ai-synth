@@ -55,8 +55,8 @@ if __name__ == '__main__':
                         for n in midi_data.instruments[0].notes
                     ]
 
-                    #add 0.5 sec of silence in beginning and end. In case we work with frequency distr. & do fourier, we dont have to zero pad.
-                    #is buggy, so dont...
+                    #probably should add 0.5 sec of silence in beginning and end. In case we work with frequency distr. & do fourier, we dont have to zero pad.
+                    #is buggy tho, so dont...
                     silence = 0.0
                     # create list of midi file segments
                     segments = []
@@ -101,7 +101,7 @@ if __name__ == '__main__':
                                 input_midi=f"././data/processed/midi/{artist}--{file.split('.')[0].replace(' ','_')}_{i}.mid",
                                 image_width = 360,
                                 image_height = 32,
-                                fps = 60,
+                                fps = 30,
                                 end_t=segm_length,
                                 silence=silence
                             )
@@ -110,6 +110,7 @@ if __name__ == '__main__':
     
     check_video_files('././data/processed/midi')
 
-    save_to_pt('././data/processed/midi')
+    save_to_pt('././data/processed/midi',seq_len=segm_length)
+
 
 

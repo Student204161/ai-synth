@@ -64,7 +64,7 @@ def pixel_range(midi_note, image_width):
     return [start_pixel, end_pixel]
  
 def create_video(input_midi: str,
-        image_width = 240,
+        image_width = 360,
         image_height = 32,
         black_key_height = 2/3,
         falling_note_color = [75, 105, 177],     # darker blue
@@ -301,6 +301,7 @@ def pad_tensor(tensor, target_shape):
 def save_to_pt(path_to_midi, seq_len=5.0):
     all_frames = []
     wavs = []
+
     for root, dirs, files in os.walk(path_to_midi):
         for file in tqdm.tqdm(files):
             if file.endswith('.mid'):
@@ -322,7 +323,7 @@ def save_to_pt(path_to_midi, seq_len=5.0):
                         frames.append(img_tensor)
 
                 wav_file = '././data/processed/wavs/'+ file.split('.')[0] +".wav"
-                wav, _ = torchaudio.load(wav_file) # 44100 Hz all wavs.
+                wav, sample_rate = torchaudio.load(wav_file) # 44100 Hz all wavs.
                 target_len = int(44100*(seq_len+0.5))
                 wav = pad_tensor(wav, (2,target_len))
                 wavs.append(wav)
@@ -330,6 +331,7 @@ def save_to_pt(path_to_midi, seq_len=5.0):
                 all_frames.append(frames)
     all_frames = torch.stack(all_frames)
     wavs = torch.stack(wavs)
+
     #save all frames to a .pt file
     torch.save(all_frames, '././data/processed/frames.pt')
     torch.save(wavs, '././data/processed/wavs.pt')
