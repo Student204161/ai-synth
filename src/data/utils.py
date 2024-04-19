@@ -70,7 +70,7 @@ def create_video(input_midi: str,
         falling_note_color = [75, 105, 177],     # darker blue
         pressed_key_color = [220, 10, 10], # lighter blue
         vertical_speed = 1/4, # Speed in main-image-heights per second
-        fps = 100,
+        fps = 30,
         end_t = 0.0,
         silence = 0.0
     ):
@@ -238,7 +238,13 @@ def create_video(input_midi: str,
     save_wav_cmd = save_wav_cmd.split()
     # save_wav_cmd[1], save_wav_cmd[-1] = input_midi, sound_file
     subprocess.call(save_wav_cmd)
- 
+
+    #if wav length is longer than end_t * sample rate, cut the end of the wav off
+    wav, sample_rate = torchaudio.load(wav_path) # 44100 Hz all wavs.
+    target_len = int(44100*(end_t))
+    wav = pad_tensor(wav, (2,target_len))
+    #save_wav
+    torchaudio.save(wav_path, wav, sample_rate)
 
     # print("Skipped - [Step 3/3] Rendering full video with ffmpeg")
     # #Running from a terminal, the long filter_complex argument needs to
@@ -324,8 +330,6 @@ def save_to_pt(path_to_midi, seq_len=5.0):
 
                 wav_file = '././data/processed/wavs/'+ file.split('.')[0] +".wav"
                 wav, sample_rate = torchaudio.load(wav_file) # 44100 Hz all wavs.
-                target_len = int(44100*(seq_len+0.5))
-                wav = pad_tensor(wav, (2,target_len))
                 wavs.append(wav)
                 frames = torch.stack(frames)
                 all_frames.append(frames)

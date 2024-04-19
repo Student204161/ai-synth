@@ -101,7 +101,7 @@ if __name__ == '__main__':
                                 input_midi=f"././data/processed/midi/{artist}--{file.split('.')[0].replace(' ','_')}_{i}.mid",
                                 image_width = 360,
                                 image_height = 32,
-                                fps = 30,
+                                fps = 20,
                                 end_t=segm_length,
                                 silence=silence
                             )
