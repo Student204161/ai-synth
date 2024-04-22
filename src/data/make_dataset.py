@@ -31,8 +31,8 @@ if __name__ == '__main__':
         os.makedirs('././data/processed/wavs')
     N_tot = count_files('././data/raw')
 
-    segm_length = 5 #in sec
-    N = 3
+    segm_length = 10 #in sec
+    N = 50
     #linear space from 0 to N, with 100 points but integers
     sample_indx = np.linspace(0, N_tot, N, dtype=int)
 

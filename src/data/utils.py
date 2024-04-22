@@ -238,17 +238,17 @@ def create_video(input_midi: str,
  
     # print("[Step 2/3] Rendering MIDI to audio with Timidity")
     wav_path = '././data/processed/wavs/'+midi_save_name+'.wav'
-    save_wav_cmd = f"timidity {input_midi} -OwM --preserve-silence -s 25600 -o {wav_path}"
+    save_wav_cmd = f"timidity {input_midi} -OwM --preserve-silence -s {sample_rate} -o {wav_path}"
     save_wav_cmd = save_wav_cmd.split()
     # save_wav_cmd[1], save_wav_cmd[-1] = input_midi, sound_file
     subprocess.call(save_wav_cmd)
 
     #if wav length is longer than end_t * sample rate, cut the end of the wav off
-    wav, sample_rate = torchaudio.load(wav_path) # 44100 Hz all wavs.
-    target_len = int(sample_rate*(end_t))
+    wav, sr = torchaudio.load(wav_path) # should be 25600 or anything base2.
+    target_len = int(sr*(end_t))
     wav = pad_tensor(wav, (1,target_len))
     #save_wav
-    torchaudio.save(wav_path, wav, sample_rate)
+    torchaudio.save(wav_path, wav, sr)
 
     # print("Skipped - [Step 3/3] Rendering full video with ffmpeg")
     # #Running from a terminal, the long filter_complex argument needs to
