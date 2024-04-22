@@ -31,8 +31,8 @@ if __name__ == '__main__':
         os.makedirs('././data/processed/wavs')
     N_tot = count_files('././data/raw')
 
-    segm_length = 5 #in sec
-    N = 10
+    segm_length = 10 #in sec
+    N = 3
     #linear space from 0 to N, with 100 points but integers
     sample_indx = np.linspace(0, N_tot, N, dtype=int)
 
@@ -100,10 +100,12 @@ if __name__ == '__main__':
                             create_video(
                                 input_midi=f"././data/processed/midi/{artist}--{file.split('.')[0].replace(' ','_')}_{i}.mid",
                                 image_width = 360,
-                                image_height = 32,
+                                image_width2 = 256, #resize to base2 number after using synthviz code                                
+                                image_height = 16,
                                 fps = 20,
                                 end_t=segm_length,
-                                silence=silence
+                                silence=silence,
+                                sample_rate=25600
                             )
 
                 count += 1

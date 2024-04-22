@@ -65,14 +65,16 @@ def pixel_range(midi_note, image_width):
  
 def create_video(input_midi: str,
         image_width = 360,
-        image_height = 32,
+        image_width2 = 256, #resize to base2 number after using synthviz code
+        image_height = 16,
         black_key_height = 2/3,
         falling_note_color = [75, 105, 177],     # darker blue
         pressed_key_color = [220, 10, 10], # lighter blue
         vertical_speed = 1/4, # Speed in main-image-heights per second
         fps = 30,
         end_t = 0.0,
-        silence = 0.0
+        silence = 0.0,
+        sample_rate = 25600
     ):
 
     midi_save_name = input_midi.split('/')[-1].split('.')[0]  #(str_list[0] + '~' + str_list[1]).split('.')[0]
@@ -161,7 +163,7 @@ def create_video(input_midi: str,
  
     #first frame init to start conditions
     img = PIL.Image.fromarray(im_frame)
-    img.save("{}/frame00000.png".format(frames_folder))
+    #img.save("{}/frame00000.png".format(frames_folder))
  
  
     # Rest of video:
@@ -174,9 +176,7 @@ def create_video(input_midi: str,
  
  
     pbar = tqdm.tqdm(total=end_t, desc='Creating video')
-    while not finished:
-        frame_ct += 1
-       
+    while not finished:       
         prev_pixel_start_rounded = pixel_start_rounded
         pixel_start += pixels_per_frame
         pixel_start_rounded = round(pixel_start)
@@ -222,10 +222,14 @@ def create_video(input_midi: str,
                 [x0, x1] = pixel_range(note, image_width)
                 im_frame[key_start:black_key_end, x0:x1] = pressed_key_color
        
-       
+        
         img = PIL.Image.fromarray(im_frame)
+
+        img = img.resize((image_width2,image_height))
+        
         img.save("{}/frame{:05d}.png".format(frames_folder, frame_ct))
-       
+        frame_ct += 1
+    
         if frame_start >= end_t:
             finished = True
    
@@ -234,15 +238,15 @@ def create_video(input_midi: str,
  
     # print("[Step 2/3] Rendering MIDI to audio with Timidity")
     wav_path = '././data/processed/wavs/'+midi_save_name+'.wav'
-    save_wav_cmd = f"timidity {input_midi} -Ow --preserve-silence --output-24bit -A120 -o {wav_path}"
+    save_wav_cmd = f"timidity {input_midi} -OwM --preserve-silence -s 25600 -o {wav_path}"
     save_wav_cmd = save_wav_cmd.split()
     # save_wav_cmd[1], save_wav_cmd[-1] = input_midi, sound_file
     subprocess.call(save_wav_cmd)
 
     #if wav length is longer than end_t * sample rate, cut the end of the wav off
     wav, sample_rate = torchaudio.load(wav_path) # 44100 Hz all wavs.
-    target_len = int(44100*(end_t))
-    wav = pad_tensor(wav, (2,target_len))
+    target_len = int(sample_rate*(end_t))
+    wav = pad_tensor(wav, (1,target_len))
     #save_wav
     torchaudio.save(wav_path, wav, sample_rate)
 
