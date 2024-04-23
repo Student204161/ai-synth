@@ -181,3 +181,5 @@ data/processed/
 data/raw/
 data.zip
 datap1.zip
+wandb/
+results/

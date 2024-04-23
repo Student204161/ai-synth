@@ -71,14 +71,15 @@ def create_video(input_midi: str,
         falling_note_color = [75, 105, 177],     # darker blue
         pressed_key_color = [220, 10, 10], # lighter blue
         vertical_speed = 1/4, # Speed in main-image-heights per second
-        fps = 30,
+        fps = 16,
         end_t = 0.0,
         silence = 0.0,
-        sample_rate = 25600
+        sample_rate = 25600,
+        split="train"
     ):
 
     midi_save_name = input_midi.split('/')[-1].split('.')[0]  #(str_list[0] + '~' + str_list[1]).split('.')[0]
-    frames_folder = os.path.join( "././data/processed/frames", midi_save_name)
+    frames_folder = os.path.join( f"././data/processed/{split}/frames", midi_save_name)
     piano_height = image_height
     main_height = image_height - piano_height
     pixels_per_frame = main_height*vertical_speed / fps # (pix/image) * (images/s) / (frames / s) =
@@ -237,7 +238,7 @@ def create_video(input_midi: str,
     pbar.close()
  
     # print("[Step 2/3] Rendering MIDI to audio with Timidity")
-    wav_path = '././data/processed/wavs/'+midi_save_name+'.wav'
+    wav_path = f'././data/processed/{split}/wavs/'+midi_save_name+'.wav'
     save_wav_cmd = f"timidity {input_midi} -OwM --preserve-silence -s {sample_rate} -o {wav_path}"
     save_wav_cmd = save_wav_cmd.split()
     # save_wav_cmd[1], save_wav_cmd[-1] = input_midi, sound_file
@@ -255,7 +256,7 @@ def create_video(input_midi: str,
     # #be in double-quotes, but the list form of subprocess.call requires
     # #_not_ double-quoting.
      
-    mp4_path = os.path.join( "././data/processed/videos", midi_save_name)
+    mp4_path = os.path.join(f"././data/processed/{split}/videos", midi_save_name)
 
     ffmpeg_cmd = f"ffmpeg -framerate {fps} -i {frames_folder}/frame%05d.png -i {wav_path} -f lavfi -t {end_t} -i anullsrc -filter_complex [1]adelay={0}|{0}[aud];[2][aud]amix -c:v libx264 -vf fps={fps} -pix_fmt yuv420p -y -strict -2 {mp4_path}.mp4 "
     print("> ffmpeg_cmd: ", ffmpeg_cmd)
@@ -273,13 +274,13 @@ def count_files(path_to_raw_data):
 
 
 #for all midi files, try see if there is a corresponding video file - for deleting midi files that couldn't be created frames for.
-def check_video_files(path_to_midi_data):
+def check_video_files(path_to_midi_data,split):
     count = 0
     for root, dirs, files in os.walk(path_to_midi_data):
         for file in files:
             if file.endswith('.mid'):
                 midi_save_name = file.split('.')[0]
-                if not os.path.exists(os.path.join('././data/processed/frames', midi_save_name)):
+                if not os.path.exists(os.path.join(f'././data/processed/{split}/frames', midi_save_name)):
                     count += 1
                     print(f"Missing video file for {midi_save_name}. Deleting")
                     os.remove(os.path.join(path_to_midi_data, file))
@@ -308,7 +309,7 @@ def pad_tensor(tensor, target_shape):
 
 # collect all frames into a torch.tensor .pt file of size (N,302,360,32,1)
 
-def save_to_pt(path_to_midi, seq_len=5.0):
+def save_to_pt(path_to_midi, seq_len=5.0,split="train"):
     all_frames = []
     wavs = []
 
@@ -316,7 +317,7 @@ def save_to_pt(path_to_midi, seq_len=5.0):
         for file in tqdm.tqdm(files):
             if file.endswith('.mid'):
 
-                frames_folder = '././data/processed/frames/'+ file.split('.')[0]
+                frames_folder = f'././data/processed/{split}/frames/'+ file.split('.')[0]
 
                 frames = []
                 for img_file in os.listdir(frames_folder):
@@ -332,7 +333,7 @@ def save_to_pt(path_to_midi, seq_len=5.0):
                         img_tensor = torch.from_numpy(img)
                         frames.append(img_tensor)
 
-                wav_file = '././data/processed/wavs/'+ file.split('.')[0] +".wav"
+                wav_file = f'././data/processed/{split}/wavs/'+ file.split('.')[0] +".wav"
                 wav, sample_rate = torchaudio.load(wav_file) # 44100 Hz all wavs.
                 wavs.append(wav)
                 frames = torch.stack(frames)
@@ -341,6 +342,6 @@ def save_to_pt(path_to_midi, seq_len=5.0):
     wavs = torch.stack(wavs)
 
     #save all frames to a .pt file
-    torch.save(all_frames, '././data/processed/frames.pt')
-    torch.save(wavs, '././data/processed/wavs.pt')
+    torch.save(all_frames, f'././data/processed/{split}/frames.pt')
+    torch.save(wavs, f'././data/processed/{split}/wavs.pt')
     
