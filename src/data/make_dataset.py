@@ -31,9 +31,9 @@ if __name__ == '__main__':
     all_files =np.asarray(all_files)
     N_tot = len(all_files)
 
-    segm_length = 2 #in sec
-    N_train,N_val,N_test = 3,2,2
-    split = "val"
+    segm_length = 4 #in sec
+    N_train,N_val,N_test = 5,2,2
+    split = "train"
 
     if not os.path.exists(f'././data/processed/{split}/midi'):
         os.makedirs(f'././data/processed/{split}/midi')
@@ -41,6 +41,12 @@ if __name__ == '__main__':
         os.makedirs(f'././data/processed/{split}/videos')
     if not os.path.exists(f'././data/processed/{split}/wavs'):
         os.makedirs(f'././data/processed/{split}/wavs')
+    if not os.path.exists(f'././data/processed/{split}/spectrograms'):
+        os.makedirs(f'././data/processed/{split}/spectrograms')
+    if not os.path.exists(f'././data/processed/{split}/spectrograms_pt'):
+        os.makedirs(f'././data/processed/{split}/spectrograms_pt')
+    if not os.path.exists(f'././data/processed/{split}/frames_pt'):
+        os.makedirs(f'././data/processed/{split}/frames_pt')
     #linear space from 0 to N, with 100 points but integers
     train_sample_indx = np.linspace(0, N_tot-1, N_train, dtype=int)
 
@@ -130,7 +136,7 @@ if __name__ == '__main__':
                     fps = 16,
                     end_t=segm_length,
                     silence=silence,
-                    sample_rate=25600,
+                    sample_rate=16000,
                     split=split
                 )
 

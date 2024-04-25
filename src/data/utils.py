@@ -4,7 +4,7 @@
 import argparse
 import os
 import subprocess
- 
+import matplotlib.pyplot as plt
 import pretty_midi
 import PIL
 import PIL.Image
@@ -13,7 +13,7 @@ import tqdm
 import torch 
 from pathlib import Path
 import torchaudio
-
+import librosa
 accidentals = "flat"
 
 white_notes = {0: "C", 2: "D", 4: "E", 5: "F", 7: "G", 9: "A", 11: "B"}
@@ -228,18 +228,18 @@ def create_video(input_midi: str,
 
         img = img.resize((image_width2,image_height))
         
-        img.save("{}/frame{:05d}.png".format(frames_folder, frame_ct))
         frame_ct += 1
-    
+        img.save("{}/frame{:05d}.png".format(frames_folder, frame_ct))
+
         if frame_start >= end_t:
             finished = True
-   
+    
  
     pbar.close()
  
     # print("[Step 2/3] Rendering MIDI to audio with Timidity")
     wav_path = f'././data/processed/{split}/wavs/'+midi_save_name+'.wav'
-    save_wav_cmd = f"timidity {input_midi} -OwM --preserve-silence -s {sample_rate} -o {wav_path}"
+    save_wav_cmd = f"timidity {input_midi} -OwM --preserve-silence -s {sample_rate} -A120 -o {wav_path}"
     save_wav_cmd = save_wav_cmd.split()
     # save_wav_cmd[1], save_wav_cmd[-1] = input_midi, sound_file
     subprocess.call(save_wav_cmd)
@@ -255,9 +255,27 @@ def create_video(input_midi: str,
     # #Running from a terminal, the long filter_complex argument needs to
     # #be in double-quotes, but the list form of subprocess.call requires
     # #_not_ double-quoting.
-     
-    mp4_path = os.path.join(f"././data/processed/{split}/videos", midi_save_name)
 
+    spec = librosa.feature.melspectrogram(y=wav.numpy(),
+                                        sr=sr, 
+                                            n_fft=2048, 
+                                            hop_length=512, 
+                                            win_length=None, 
+                                            window='hann', 
+                                            center=False, 
+                                            pad_mode='constant', 
+                                            power=2.0,
+                                     n_mels=122) #n_mels should be same dim as time if possible?
+    
+    assert spec.shape[1] == spec.shape[2] 
+    spec = torch.nn.functional.interpolate(torch.tensor(spec).unsqueeze(0),size=(256,256)).squeeze()
+    plt.imshow(spec)    
+    plt.savefig(f'././data/processed/{split}/spectrograms/{midi_save_name}.png')
+
+    torch.save(spec,f'././data/processed/{split}/spectrograms_pt/{midi_save_name}.pt')
+
+
+    mp4_path = os.path.join(f"././data/processed/{split}/videos", midi_save_name)
     ffmpeg_cmd = f"ffmpeg -framerate {fps} -i {frames_folder}/frame%05d.png -i {wav_path} -f lavfi -t {end_t} -i anullsrc -filter_complex [1]adelay={0}|{0}[aud];[2][aud]amix -c:v libx264 -vf fps={fps} -pix_fmt yuv420p -y -strict -2 {mp4_path}.mp4 "
     print("> ffmpeg_cmd: ", ffmpeg_cmd)
     subprocess.call(ffmpeg_cmd.split())
@@ -338,6 +356,9 @@ def save_to_pt(path_to_midi, seq_len=5.0,split="train"):
                 wavs.append(wav)
                 frames = torch.stack(frames)
                 all_frames.append(frames)
+                torch.save(frames, f'././data/processed/{split}/frames_pt/'+file.split('.')[0]+'.pt')
+
+                
     all_frames = torch.stack(all_frames)
     wavs = torch.stack(wavs)
 
