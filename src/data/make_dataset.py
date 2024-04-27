@@ -44,7 +44,8 @@ def create_segment_midi(segment, start_time, end_time, tempo_changes, midi_data)
     return new_midi
 
 if __name__ == '__main__':
-    main_dir = 'data_sanity'
+    fps_set = 1
+    main_dir = f'data_{fps_set}fps'
     processed_midi_dir = f'{main_dir}/processed/midi'
     frames_dir = f'{main_dir}/processed/frames'
     raw_dir = f'{main_dir}/raw'
@@ -54,7 +55,7 @@ if __name__ == '__main__':
             os.makedirs(dir)
     N_tot = count_files(raw_dir)
 
-    segm_length = 5 #in sec
+    segm_length = 1 #in sec
     N = 100
     #linear space from 0 to N, with 100 points but integers
     sample_indx = np.linspace(0, N_tot, N, dtype=int)
@@ -133,17 +134,17 @@ if __name__ == '__main__':
                                 input_midi=processed_midi_path,
                                 image_width=360,
                                 image_height=32,
-                                fps=60,
+                                fps=fps_set,
                                 end_t=segm_length,
                                 silence=silence,
                                 data_dir=f"{main_dir}/processed/"
                             )
                             print(f"Saved to {processed_midi_path}")
                             # also save piano roll matrix
-                            #piano_roll = midi.get_piano_roll(fs=60)
+                            # piano_roll = midi.get_piano_roll(fs=60)
             
-                            #np.save(f"././data/processed/midi/{artist}--{file.split('.')[0]}_{i}.npy", piano_roll)
-                        elif Path(processed_midi_path).exists():
-                            print(f"File {processed_midi_path} already exists, skipping...")
+                            # np.save(f"././data/processed/midi/{artist}--{file.split('.')[0]}_{i}.npy", piano_roll)
+                        # elif Path(processed_midi_path).exists():
+                        #     print(f"File {processed_midi_path} already exists, skipping...")
                 count += 1
-    check_video_files(processed_midi_dir, frames_dir="././data_sanity/processed/frames")
+    # check_video_files(processed_midi_dir, frames_dir="././data_sanity/processed/frames")
