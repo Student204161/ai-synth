@@ -132,21 +132,8 @@ def create_piano_image(keys_to_color, image_width=360, image_height=32, black_ke
             im_frame[key_start:black_key_end, x0:x1] = pressed_key_color
 
     # note_names = [pretty_midi.note_number_to_name(note) for note in keys_to_color]
-    note_names = {}
- 
-    for note in range(21, 109):
-        [note_in_chromatic_scale, octave] = note_breakdown(note)
-       
-        if note_in_chromatic_scale in white_notes:
-            note_names[note] = "{}{:d}".format(
-                white_notes[note_in_chromatic_scale], octave)
-        else:
-            if accidentals == "flat":
-                note_names[note] = "{}{:d}".format(
-                    flat_notes[note_in_chromatic_scale], octave)
-            else:
-                note_names[note] = "{}{:d}".format(
-                    sharp_notes[note_in_chromatic_scale], octave)
+    note_names = get_note_names_map()
+
     my_note_names = [note_names[note] for note in keys_to_color]
     note_name_str = "_".join(my_note_names)
     img = PIL.Image.fromarray(im_frame)
@@ -160,6 +147,22 @@ def create_piano_image(keys_to_color, image_width=360, image_height=32, black_ke
     else:
         img.show(title=note_name_str)
     return img
+
+def get_note_names_map():
+    note_names = {}
+    for note in range(21, 109):
+        [note_in_chromatic_scale, octave] = note_breakdown(note)
+        if note_in_chromatic_scale in white_notes:
+            note_names[note] = "{}{:d}".format(
+                white_notes[note_in_chromatic_scale], octave)
+        else:
+            if accidentals == "flat":
+                note_names[note] = "{}{:d}".format(
+                    flat_notes[note_in_chromatic_scale], octave)
+            else:
+                note_names[note] = "{}{:d}".format(
+                    sharp_notes[note_in_chromatic_scale], octave)
+    return note_names
 
 def create_video(input_midi: str,
         image_width = 360,
