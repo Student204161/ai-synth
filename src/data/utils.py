@@ -64,7 +64,7 @@ def pixel_range(midi_note, image_width):
     return [start_pixel, end_pixel]
 
 
-def create_piano_image(keys_to_color, image_width=360, image_height=32, black_key_height=2/3, pressed_key_color=[220, 10, 10], frames_folder="one_note_frames", save_img=True):
+def create_piano_image(keys_to_color, image_width=360, image_height=32, black_key_height=2/3, pressed_key_color=[220, 10, 10], frames_folder="one_note_frames", save_img=True, save_path=None):
     im_base = np.zeros((image_height, image_width, 3), dtype=np.uint8)
     piano_height = image_height
     pixel_start_rounded = 0
@@ -152,8 +152,11 @@ def create_piano_image(keys_to_color, image_width=360, image_height=32, black_ke
     img = PIL.Image.fromarray(im_frame)
     # if frames folder doesnt exist make it
     if save_img:
-        os.makedirs(frames_folder, exist_ok=True)
-        img.save(f"{frames_folder}/{note_name_str}.png")
+        if save_path is None:
+            os.makedirs(frames_folder, exist_ok=True)
+            img.save(f"{frames_folder}/{note_name_str}.png")
+        else:
+            img.save(save_path)
     else:
         img.show(title=note_name_str)
     return img
