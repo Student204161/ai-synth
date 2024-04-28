@@ -63,8 +63,7 @@ def pixel_range(midi_note, image_width):
    
     return [start_pixel, end_pixel]
 
-
-def create_piano_image(keys_to_color, image_width=360, image_height=32, black_key_height=2/3, pressed_key_color=[220, 10, 10], frames_folder="one_note_frames", save_img=True, save_path=None):
+def create_piano_image(keys_to_color, image_width=360, image_height=32, black_key_height=2/3, pressed_key_color=[220, 10, 10], frames_folder="one_note_frames", save_img=True, save_path=None, show_img=False):
     im_base = np.zeros((image_height, image_width, 3), dtype=np.uint8)
     piano_height = image_height
     pixel_start_rounded = 0
@@ -86,15 +85,34 @@ def create_piano_image(keys_to_color, image_width=360, image_height=32, black_ke
             im_base[key_start:white_key_end, x0:x1] = [255, 255, 255]
         
         # draw lines separating octaves
-        if i % 12 == 0:
-            im_lines[0:(key_start-1), (x0-2):(x0-1)] = [20, 20, 20]
-
+        # if i % 12 == 0:
+        #     im_lines[0:(key_start-1), (x0-2):(x0-1)] = [20, 20, 20]
+    black_keys_idxs = [22, 25, 27, 30, 32, 34, 37, 39, 42, 44, 46, 49, 51, 54, 56, 58, 61, 63, 66, 68, 70, 73, 75, 78, 80, 82, 85, 87, 90, 92, 94, 97, 99, 102, 104, 106]
+    black_key_offsets = {
+        black_keys_idxs[0]: 1,
+        black_keys_idxs[1]: 1,
+        black_keys_idxs[9]: 1,
+        black_keys_idxs[12]: 1,
+        black_keys_idxs[18]: 1,
+        black_keys_idxs[20]: 1,
+        black_keys_idxs[21]: 1,
+        black_keys_idxs[29]: 1,
+        black_keys_idxs[5]: -1,
+        black_keys_idxs[6]: -1,
+        black_keys_idxs[14]: -1,
+        black_keys_idxs[17]: -1,
+        black_keys_idxs[23]: -1,
+        black_keys_idxs[25]: -1,
+        black_keys_idxs[26]: -1,
+        black_keys_idxs[34]: -1,
+    }
     for i in range(21, 109):
         # draw black keys
         if not is_white_key(i):
+            black_keys_idxs.append(i)
             [x0, x1] = pixel_range(i, image_width)
-            im_base[key_start:black_key_end, x0:x1] = [0, 0, 0]
-
+            offset_blk = black_key_offsets.get(i, 0)
+            im_base[key_start:black_key_end, x0+offset_blk:x1+offset_blk] = [0, 0, 0]
     im_piano = im_base[key_start:white_key_end, :]
 
     im_frame = im_base.copy()
@@ -120,16 +138,25 @@ def create_piano_image(keys_to_color, image_width=360, image_height=32, black_ke
         if is_white_key(note):
             if (not is_white_key(note - 1)) and (note > 21):
                 [x0, x1] = pixel_range(note - 1, image_width)
-                im_frame[key_start:black_key_end, x0:x1] = [0,0,0]
+                offset_blk = black_key_offsets.get(note - 1, 0)
+                im_frame[key_start:black_key_end, x0+offset_blk:x1+offset_blk] = [0,0,0]
+                
+                # [x0, x1] = pixel_range(note - 1, image_width)
+                # im_frame[key_start:black_key_end, x0:x1] = [0,0,0]
             
             if (not is_white_key(note + 1)) and (note < 108):
                 [x0, x1] = pixel_range(note + 1, image_width)
-                im_frame[key_start:black_key_end, x0:x1] = [0,0,0]
+                offset_blk = black_key_offsets.get(note + 1, 0)
+                im_frame[key_start:black_key_end, x0+offset_blk:x1+offset_blk] = [0,0,0]
+                # [x0, x1] = pixel_range(note + 1, image_width)
+                # im_frame[key_start:black_key_end, x0:x1] = [0,0,0]
 
     for note in keys_to_color:
         if not is_white_key(note):
             [x0, x1] = pixel_range(note, image_width)
-            im_frame[key_start:black_key_end, x0:x1] = pressed_key_color
+            offset_blk = black_key_offsets.get(note, 0)
+            im_frame[key_start:black_key_end, x0+offset_blk:x1+offset_blk] = pressed_key_color
+            # im_frame[key_start:black_key_end, x0:x1] = pressed_key_color
 
     # note_names = [pretty_midi.note_number_to_name(note) for note in keys_to_color]
     note_names = get_note_names_map()
@@ -144,9 +171,94 @@ def create_piano_image(keys_to_color, image_width=360, image_height=32, black_ke
             img.save(f"{frames_folder}/{note_name_str}.png")
         else:
             img.save(save_path)
-    else:
+    if show_img:
         img.show(title=note_name_str)
     return img
+
+# this version doesn't do the offsets
+# def create_piano_image_less_clean(keys_to_color, image_width=360, image_height=32, black_key_height=2/3, pressed_key_color=[220, 10, 10], frames_folder="one_note_frames", save_img=True, save_path=None):
+#     im_base = np.zeros((image_height, image_width, 3), dtype=np.uint8)
+#     piano_height = image_height
+#     pixel_start_rounded = 0
+#     prev_pixel_start_rounded = 0
+#     pixel_increment = pixel_start_rounded - prev_pixel_start_rounded
+#     main_height = image_height - piano_height
+
+#     # Draw the piano, and the grey lines next to the C's for the main area:
+#     key_start = 0
+#     white_key_end = image_height - 1
+#     black_key_end = round(image_height - (1-black_key_height)*piano_height)
+
+#     im_lines = im_base.copy()
+
+#     for i in range(21, 109):
+#         # draw white keys
+#         if is_white_key(i):
+#             [x0, x1] = pixel_range(i, image_width)
+#             im_base[key_start:white_key_end, x0:x1] = [255, 255, 255]
+        
+#         # draw lines separating octaves
+#         if i % 12 == 0:
+#             im_lines[0:(key_start-1), (x0-2):(x0-1)] = [20, 20, 20]
+
+#     for i in range(21, 109):
+#         # draw black keys
+#         if not is_white_key(i):
+#             [x0, x1] = pixel_range(i, image_width)
+#             im_base[key_start:black_key_end, x0:x1] = [0, 0, 0]
+
+#     im_piano = im_base[key_start:white_key_end, :]
+
+#     im_frame = im_base.copy()
+#     im_frame += im_lines
+
+#     # # Copy most of the previous frame into the new frame:
+#     im_frame[pixel_increment:main_height, :] = im_frame[0:(main_height - pixel_increment), :]
+#     im_frame[0:pixel_increment, :] = im_lines[0:pixel_increment, :]
+#     im_frame[key_start:white_key_end, :] = im_piano
+#     # Which keys need to be colored?
+#     # TODO(jxm): put notes in some data structure or something to make this much faster
+#     # keys_to_color = []
+
+#     # First color the white keys (this will cover some black-key pixels),
+#     # then re-draw the black keys either side,
+#     # then color the black keys.
+#     for note in keys_to_color:
+#         if is_white_key(note):
+#             [x0, x1] = pixel_range(note, image_width)
+#             im_frame[key_start:white_key_end, x0:x1] = pressed_key_color
+
+#     for note in keys_to_color:
+#         if is_white_key(note):
+#             if (not is_white_key(note - 1)) and (note > 21):
+#                 [x0, x1] = pixel_range(note - 1, image_width)
+#                 im_frame[key_start:black_key_end, x0:x1] = [0,0,0]
+            
+#             if (not is_white_key(note + 1)) and (note < 108):
+#                 [x0, x1] = pixel_range(note + 1, image_width)
+#                 im_frame[key_start:black_key_end, x0:x1] = [0,0,0]
+
+#     for note in keys_to_color:
+#         if not is_white_key(note):
+#             [x0, x1] = pixel_range(note, image_width)
+#             im_frame[key_start:black_key_end, x0:x1] = pressed_key_color
+
+#     # note_names = [pretty_midi.note_number_to_name(note) for note in keys_to_color]
+#     note_names = get_note_names_map()
+
+#     my_note_names = [note_names[note] for note in keys_to_color]
+#     note_name_str = "_".join(my_note_names)
+#     img = PIL.Image.fromarray(im_frame)
+#     # if frames folder doesnt exist make it
+#     if save_img:
+#         if save_path is None:
+#             os.makedirs(frames_folder, exist_ok=True)
+#             img.save(f"{frames_folder}/{note_name_str}.png")
+#         else:
+#             img.save(save_path)
+#     else:
+#         img.show(title=note_name_str)
+#     return img
 
 def get_note_names_map():
     note_names = {}

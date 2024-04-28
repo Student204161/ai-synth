@@ -2,6 +2,11 @@ from utils import create_piano_image, get_note_names_map
 import pretty_midi
 import matplotlib.pyplot as plt
 import os
+# import path lib
+from pathlib import Path
+
+path_str = "./data"
+data_path = Path(path_str)
 
 if __name__ == '__main__':
     # for every note in the range of 0 to 127
@@ -11,7 +16,7 @@ if __name__ == '__main__':
     note_names = [note_names_map[note] for note in midi_notes]
     # display all images by note name in order
     class_names = sorted(list(set(note_name[:-1] for note_name in note_names)))
-    dir = 'data/one_note_frames/'
+    dir = 'data/one_note_frames_cleaner/'
     os.makedirs(dir, exist_ok=True)
     print(f"made dir: {dir}")
     # create directory for each class within 
@@ -23,5 +28,5 @@ if __name__ == '__main__':
         save_path = f"{os.path.join(dir, note_class, note_name)}.jpg"
         img = create_piano_image([midi_note], save_path=save_path)
         imgs.append(img)
-    
+
     # display them here if you want
