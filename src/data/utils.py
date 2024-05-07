@@ -14,6 +14,8 @@ import torch
 from pathlib import Path
 import torchaudio
 import librosa
+import shutil
+
 accidentals = "flat"
 
 white_notes = {0: "C", 2: "D", 4: "E", 5: "F", 7: "G", 9: "A", 11: "B"}
@@ -65,22 +67,23 @@ def pixel_range(midi_note, image_width):
  
 def create_video(input_midi: str,
         image_width = 360,
-        image_width2 = 256, #resize to base2 number after using synthviz code
-        image_height = 16,
+        img_resize = 224, #resize to base2 number after using synthviz code
+        image_height = 360,
         black_key_height = 2/3,
+        piano_height=64,
         falling_note_color = [75, 105, 177],     # darker blue
         pressed_key_color = [220, 10, 10], # lighter blue
         vertical_speed = 1/4, # Speed in main-image-heights per second
         fps = 16,
         end_t = 0.0,
         silence = 0.0,
-        sample_rate = 25600,
+        sample_rate = 16000,
         split="train"
     ):
 
     midi_save_name = input_midi.split('/')[-1].split('.')[0]  #(str_list[0] + '~' + str_list[1]).split('.')[0]
     frames_folder = os.path.join( f"././data/processed/{split}/frames", midi_save_name)
-    piano_height = image_height
+    piano_height = piano_height
     main_height = image_height - piano_height
     pixels_per_frame = main_height*vertical_speed / fps # (pix/image) * (images/s) / (frames / s) =
  
@@ -106,15 +109,17 @@ def create_video(input_midi: str,
     #print("Loading MIDI file:", input_midi)
     midi_data = pretty_midi.PrettyMIDI(input_midi)
     
-    
-    notes = [
-        { "note": n.pitch, "start": n.start, "end": n.end}
-        for n in midi_data.instruments[0].notes
-    ]
+    try:
+        notes = [
+            { "note": n.pitch, "start": n.start, "end": n.end}
+            for n in midi_data.instruments[0].notes
+        ]
+    except:
+        return 
 
     
     
-    print(f"Loaded {len(notes)} notes from MIDI file")
+    #print(f"Loaded {len(notes)} notes from MIDI file")
  
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ~ The rest of the code is about making the video. ~
@@ -129,7 +134,7 @@ def create_video(input_midi: str,
     im_base = np.zeros((image_height, image_width, 3), dtype=np.uint8)
  
     # Draw the piano, and the grey lines next to the C's for the main area:
-    key_start = 0
+    key_start = image_height - piano_height #0
     white_key_end = image_height - 1
     black_key_end = round(image_height - (1-black_key_height)*piano_height)
  
@@ -176,7 +181,7 @@ def create_video(input_midi: str,
     #print("[Step 1/3] Generating video frames from notes")
  
  
-    pbar = tqdm.tqdm(total=end_t, desc='Creating video')
+    #pbar = tqdm.tqdm(total=end_t, desc='Creating video')
     while not finished:       
         prev_pixel_start_rounded = pixel_start_rounded
         pixel_start += pixels_per_frame
@@ -184,10 +189,10 @@ def create_video(input_midi: str,
        
         pixel_increment = pixel_start_rounded - prev_pixel_start_rounded
        
-        pbar.update(1/fps)
+        #pbar.update(1/fps)
         frame_start += 1/fps
  
-        pbar.set_description(f'Creating video [Frame count = {frame_ct}]')
+        #pbar.set_description(f'Creating video [Frame count = {frame_ct}]')
        
         # # Copy most of the previous frame into the new frame:
         im_frame[pixel_increment:main_height, :] = im_frame[0:(main_height - pixel_increment), :]
@@ -226,7 +231,7 @@ def create_video(input_midi: str,
         
         img = PIL.Image.fromarray(im_frame)
 
-        img = img.resize((image_width2,image_height))
+        #img = img.resize((img_resize,img_resize))
         
         frame_ct += 1
         img.save("{}/frame{:05d}.png".format(frames_folder, frame_ct))
@@ -235,11 +240,12 @@ def create_video(input_midi: str,
             finished = True
     
  
-    pbar.close()
+    #pbar.close()
  
     # print("[Step 2/3] Rendering MIDI to audio with Timidity")
+    print(sample_rate)
     wav_path = f'././data/processed/{split}/wavs/'+midi_save_name+'.wav'
-    save_wav_cmd = f"timidity {input_midi} -OwM --preserve-silence -s {sample_rate} -A120 -o {wav_path}"
+    save_wav_cmd = f"timidity {input_midi} -OwM --preserve-silence -s {sample_rate} -A120 -o {wav_path} "
     save_wav_cmd = save_wav_cmd.split()
     # save_wav_cmd[1], save_wav_cmd[-1] = input_midi, sound_file
     subprocess.call(save_wav_cmd)
@@ -258,52 +264,31 @@ def create_video(input_midi: str,
 
     spec = librosa.feature.melspectrogram(y=wav.numpy(),
                                         sr=sr, 
-                                            n_fft=2048, 
+                                            n_fft=4096, 
                                             hop_length=512, 
                                             win_length=None, 
                                             window='hann', 
                                             center=False, 
                                             pad_mode='constant', 
                                             power=2.0,
-                                     n_mels=122) #n_mels should be same dim as time if possible?
-    
-    assert spec.shape[1] == spec.shape[2] 
-    spec = torch.nn.functional.interpolate(torch.tensor(spec).unsqueeze(0),size=(256,256)).squeeze()
-    plt.imshow(spec)    
-    plt.savefig(f'././data/processed/{split}/spectrograms/{midi_save_name}.png')
-
+                                            fmin=1,
+                                            fmax=5000, #pitch 109 / piano key 88 has frequency centered around 4200~ so just let fmax be 5000  https://inspiredacoustics.com/en/MIDI_note_numbers_and_center_frequencies
+                                            n_mels=88) #88 piano keys, means 88 bins
+    #print(spec.shape)
+    #assert spec.shape[1] == spec.shape[2] 
+    spec = spec.squeeze()
+    #spec = torch.nn.functional.interpolate(torch.tensor(spec).unsqueeze(0),size=(80,128)).squeeze().permute(1,0)
+    #plt.imshow(spec)    
+    #plt.savefig(f'././data/processed/{split}/spectrograms/{midi_save_name}.png')
     torch.save(spec,f'././data/processed/{split}/spectrograms_pt/{midi_save_name}.pt')
 
 
     mp4_path = os.path.join(f"././data/processed/{split}/videos", midi_save_name)
-    ffmpeg_cmd = f"ffmpeg -framerate {fps} -i {frames_folder}/frame%05d.png -i {wav_path} -f lavfi -t {end_t} -i anullsrc -filter_complex [1]adelay={0}|{0}[aud];[2][aud]amix -c:v libx264 -vf fps={fps} -pix_fmt yuv420p -y -strict -2 {mp4_path}.mp4 "
-    print("> ffmpeg_cmd: ", ffmpeg_cmd)
+    ffmpeg_cmd = f"ffmpeg -loglevel quiet -framerate {fps} -i {frames_folder}/frame%05d.png -i {wav_path} -f lavfi -t {end_t} -i anullsrc -filter_complex [1]adelay={0}|{0}[aud];[2][aud]amix -c:v libx264 -vf fps={fps} -pix_fmt yuv420p -y -strict -2 {mp4_path}.mp4 "
+    #print("> ffmpeg_cmd: ", ffmpeg_cmd)
     subprocess.call(ffmpeg_cmd.split())
 
 
-
-def count_files(path_to_raw_data):
-    count = 0
-    for root, dirs, files in os.walk(path_to_raw_data):
-        for file in files:
-            if file.endswith('.mid'):
-                count += 1
-    return count
-
-
-#for all midi files, try see if there is a corresponding video file - for deleting midi files that couldn't be created frames for.
-def check_video_files(path_to_midi_data,split):
-    count = 0
-    for root, dirs, files in os.walk(path_to_midi_data):
-        for file in files:
-            if file.endswith('.mid'):
-                midi_save_name = file.split('.')[0]
-                if not os.path.exists(os.path.join(f'././data/processed/{split}/frames', midi_save_name)):
-                    count += 1
-                    print(f"Missing video file for {midi_save_name}. Deleting")
-                    os.remove(os.path.join(path_to_midi_data, file))
-
-    return count
 
 def pad_tensor(tensor, target_shape):
     """
@@ -327,9 +312,7 @@ def pad_tensor(tensor, target_shape):
 
 # collect all frames into a torch.tensor .pt file of size (N,302,360,32,1)
 
-def save_to_pt(path_to_midi, seq_len=5.0,split="train"):
-    all_frames = []
-    wavs = []
+def save_to_pt(path_to_midi,split="train"):
 
     for root, dirs, files in os.walk(path_to_midi):
         for file in tqdm.tqdm(files):
@@ -345,24 +328,134 @@ def save_to_pt(path_to_midi, seq_len=5.0,split="train"):
                         img = PIL.Image.open(img_path)
                         #to numpy
                         img = np.array(img)
-                        # to grey scale
-                        img = img[:,:,0]
+                        ## to grey scale
+                        ##img = img[:,:,0]
                         #to tensor
                         img_tensor = torch.from_numpy(img)
                         frames.append(img_tensor)
 
-                wav_file = f'././data/processed/{split}/wavs/'+ file.split('.')[0] +".wav"
-                wav, sample_rate = torchaudio.load(wav_file) # 44100 Hz all wavs.
-                wavs.append(wav)
                 frames = torch.stack(frames)
-                all_frames.append(frames)
                 torch.save(frames, f'././data/processed/{split}/frames_pt/'+file.split('.')[0]+'.pt')
 
-                
-    all_frames = torch.stack(all_frames)
-    wavs = torch.stack(wavs)
+def make_synthetic(N,split,max_notes=3):
 
-    #save all frames to a .pt file
-    torch.save(all_frames, f'././data/processed/{split}/frames.pt')
-    torch.save(wavs, f'././data/processed/{split}/wavs.pt')
-    
+    if not os.path.exists(f'././data/processed/{split}/midi'):
+        os.makedirs(f'././data/processed/{split}/midi')
+    if not os.path.exists(f'././data/processed/{split}/videos'):
+        os.makedirs(f'././data/processed/{split}/videos')
+    if not os.path.exists(f'././data/processed/{split}/wavs'):
+        os.makedirs(f'././data/processed/{split}/wavs')
+    if not os.path.exists(f'././data/processed/{split}/spectrograms'):
+        os.makedirs(f'././data/processed/{split}/spectrograms')
+    if not os.path.exists(f'././data/processed/{split}/spectrograms_pt'):
+        os.makedirs(f'././data/processed/{split}/spectrograms_pt')
+    if not os.path.exists(f'././data/processed/{split}/frames_pt'):
+        os.makedirs(f'././data/processed/{split}/frames_pt')
+
+    note_count = np.random.randint(1,max_notes + 1, N)
+    tot_notes = np.sum(note_count)
+    #midi piano starts at 21 to 109.
+    lowest_pitch = 21
+    highest_pitch = 109
+    pitches  = (torch.randperm(tot_notes) % (highest_pitch-lowest_pitch)).numpy() + lowest_pitch
+    #velocitys  = (torch.randperm(tot_notes) % 20).numpy()
+
+    note_index = 0
+    for i in range(N):
+        midi = pretty_midi.PrettyMIDI()
+        instrument = pretty_midi.Instrument(0)
+
+        for note in range(note_count[i]):
+            pitch = pitches[note_index]
+            velocity = 100
+            #clip starts at 0 and ends at sec 1
+            min_duration = 0.15
+            start = np.random.uniform(0.1,0.7*2)
+            end = np.random.uniform(start+min_duration, 2 - 0.1)
+            note = pretty_midi.Note(velocity=velocity, pitch=pitch, start=start, end=end)
+            instrument.notes.append(note)
+            note_index += 1
+        midi.instruments.append(instrument)
+        #save midi
+        string_i = '{:0>5}'.format(str(i))
+        midi.write(f'data/processed/{split}/midi/syn_{string_i}.mid')
+
+
+
+import os
+import tqdm
+import threading
+
+def synth_create_vids_worker(split, midi_files, image_width, image_height, piano_height, fps, segm_length, sample_rate, pbar):
+    for midi_file in midi_files:
+        if not os.path.exists(os.path.join(f'data/processed/{split}/spectrograms_pt', midi_file.replace('.mid','.pt'))):
+            create_video(
+                input_midi=os.path.join(f'data/processed/{split}/midi', midi_file),
+                image_width=image_width,
+                image_height=image_height,
+                piano_height=piano_height,
+                fps=fps,
+                end_t=segm_length,
+                sample_rate=sample_rate,
+                split=split
+            )
+            pbar.update(1)
+
+def synth_create_vids(split, image_width=512, image_height=16, piano_height=16, segm_length=2, sample_rate=16000, fps=16, num_threads=8):
+    # Find paths to all midi files
+    midi_files = [file for file in os.listdir(f'data/processed/{split}/midi') if file.endswith('.mid')]
+    midi_files.sort()
+
+    # Split midi_files into chunks for each thread
+    chunks = [midi_files[i:i + len(midi_files)//num_threads] for i in range(0, len(midi_files), len(midi_files)//num_threads)]
+
+    # Initialize progress bar
+    total_files = sum(len(chunk) for chunk in chunks)
+    with tqdm.tqdm(total=total_files) as pbar:
+        # Create threads
+        threads = []
+        for chunk in chunks:
+            t = threading.Thread(target=synth_create_vids_worker, args=(split, chunk, image_width, image_height, piano_height, fps, segm_length, sample_rate, pbar))
+            threads.append(t)
+
+        # Start threads
+        for thread in threads:
+            thread.start()
+
+        # Wait for all threads to finish
+        for thread in threads:
+            thread.join()
+
+
+
+def print_note_pitches_in_directory(directory):
+    count=0
+    files = os.listdir(directory)
+    files.sort()
+    for filename in files:
+        if count > 128:
+            break
+        count+=1
+        if filename.endswith(".mid"):
+            file_path = os.path.join(directory, filename)
+            print(f"Notes in {filename}:")
+            midi_data = pretty_midi.PrettyMIDI(file_path)
+            for instrument in midi_data.instruments:
+                print(f"Instrument: {instrument.name}")
+                for note in instrument.notes:
+                    print(f"Note: {pretty_midi.note_number_to_name(note.pitch)} ({note.pitch})")
+        spec_path = file_path.replace('.mid','.pt').replace('midi','spectrograms_pt')                    
+
+        spectrogram = torch.load(spec_path)        
+        plot_filename = os.path.splitext(filename)[0] + ".png"  # Generate plot filename
+        plot_folder = r'/home/khalil/dtu/ai-synth/plots'
+        plot_path = os.path.join(plot_folder, plot_filename)
+
+        #librosa.display.specshow(librosa.power_to_db(spectrogram, ref=np.max), y_axis='mel', x_axis='time')
+        # plt.imshow(librosa.power_to_db(spectrogram, ref=np.max))
+        plt.imshow(spectrogram)
+        plt.colorbar(format='%+2.0f dB')
+        plt.title('Mel Spectrogram')
+        plt.tight_layout()
+        plt.savefig(plot_path)
+        plt.close()

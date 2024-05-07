@@ -31,9 +31,9 @@ if __name__ == '__main__':
     all_files =np.asarray(all_files)
     N_tot = len(all_files)
 
-    segm_length = 4 #in sec
-    N_train,N_val,N_test = 5,2,2
-    split = "train"
+    segm_length = 1 #in sec
+    N_train,N_val,N_test = 20,2,2
+    split = "val"
 
     if not os.path.exists(f'././data/processed/{split}/midi'):
         os.makedirs(f'././data/processed/{split}/midi')
@@ -75,8 +75,10 @@ if __name__ == '__main__':
         print(f"Processing {file}")
 
         #for each midi file, seperate the notes into 5 second intervals
-
-        midi_data = pretty_midi.PrettyMIDI(file)
+        try:
+            midi_data = pretty_midi.PrettyMIDI(file)
+        except:
+            continue
         artist = file.split('\\')[-2] if os.name != "posix" else file.split('/')[-2]
         artist = artist.replace(' ','_')
         song_name = file.split('\\')[-1] if os.name != "posix" else file.split('/')[-1]
@@ -130,9 +132,10 @@ if __name__ == '__main__':
                 midi.write(f"././data/processed/{split}/midi/{artist}--{song_name.split('.')[0]}_{i}.mid")
                 create_video(
                     input_midi=f"././data/processed/{split}/midi/{artist}--{song_name.split('.')[0]}_{i}.mid",
-                    image_width = 360,
-                    image_width2 = 256, #resize to base2 number after using synthviz code                                
+                    image_width = 512,
+                    img_resize = 360, #resize to vivit input size after using synthviz code                                
                     image_height = 16,
+                    piano_height = 16,
                     fps = 16,
                     end_t=segm_length,
                     silence=silence,
