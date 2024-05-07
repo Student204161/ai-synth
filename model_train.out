@@ -1,0 +1,33 @@
+Trainable Parameters: 1668.023M
+Trainable Parameters: 423.595M
+Trainable Parameters: 419.532M
+Trainable Parameters: 419.532M
+Trainable Parameters: 333.106M
+Trainable Parameters: 268.472M
+Trainable Parameters: 167.334M
+Trainable Parameters: 167.334M
+Trainable Parameters: 167.334M
+starting training...
+Trainable Parameters: 167.334M
+starting training...
+aight dude
+aight dude
+Trainable Parameters: 167.334M
+starting training...
+epoch train mean loss:2.933429718017578
+epoch val mean loss:3.5653867721557617
+epoch train mean loss:2.91733717918396
+epoch val mean loss:2.985544204711914
+epoch train mean loss:2.8993587493896484
+epoch val mean loss:2.9962968826293945
+epoch train mean loss:2.8938326835632324
+epoch val mean loss:2.829212188720703
+epoch train mean loss:2.8965961933135986
+epoch val mean loss:3.01694393157959
+Trainable Parameters: 91.984M
+Train data N: 16000
+Val data N: 1000
+Trainable Parameters: 91.984M
+Trainable Parameters: 91.984M
+Train data N: 16000
+Val data N: 1000
