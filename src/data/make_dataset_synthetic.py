@@ -16,7 +16,7 @@ import PIL
 import PIL.Image
 import numpy as np
 import tqdm
-from utils import create_video, count_files, check_video_files, save_to_pt, make_synthetic,synth_create_vids
+from utils import create_video, save_to_pt, make_synthetic,synth_create_vids
 from pathlib import Path
 import torch
 import os
@@ -45,12 +45,11 @@ if __name__ == '__main__':
     N_tot = len(all_files)
 
     segm_length = 2 #in sec
-    N_train,N_val,N_test = 4000, 400,100
+    N_train,N_val,N_test = 16000, 1000,100
     split = "train"
     make_synthetic(N_train,split)
     synth_create_vids(split,segm_length=segm_length)
     save_to_pt(f'././data/processed/{split}/midi', split=split)
-
 
     split = "val"
     make_synthetic(N_val,split)

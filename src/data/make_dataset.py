@@ -16,7 +16,7 @@ import PIL
 import PIL.Image
 import numpy as np
 import tqdm
-from utils import create_video, count_files, check_video_files, save_to_pt
+from utils import create_video, save_to_pt
 from pathlib import Path
  
 
@@ -31,9 +31,9 @@ if __name__ == '__main__':
     all_files =np.asarray(all_files)
     N_tot = len(all_files)
 
-    segm_length = 1 #in sec
-    N_train,N_val,N_test = 20,2,2
-    split = "val"
+    segm_length = 2 #in sec
+    N_train,N_val,N_test = 10, 2, 2
+    split = "train"
 
     if not os.path.exists(f'././data/processed/{split}/midi'):
         os.makedirs(f'././data/processed/{split}/midi')
@@ -145,7 +145,7 @@ if __name__ == '__main__':
 
     count += 1
 
-    check_video_files(f'././data/processed/{split}/midi',split=split)
+#    check_video_files(f'././data/processed/{split}/midi',split=split)
 
     save_to_pt(f'././data/processed/{split}/midi',seq_len=segm_length,split=split)
 
