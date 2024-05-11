@@ -1,0 +1,140 @@
+import torch
+from torch.utils.data import Dataset, DataLoader
+import numpy as np
+import soundfile as sf
+from tqdm import tqdm
+import wandb
+import sys, os
+#sys.path.append(os.path.dirname (os.path.dirname (os.path.abspath (__file__))))
+from torch import nn
+
+from transformers.models.vivit.modeling_vivit import VivitModel, VivitConfig, VivitLayer, VivitEncoder
+from transformers.models.speecht5.modeling_speecht5 import SpeechT5Decoder, SpeechT5Config, SpeechT5SpeechDecoderPostnet, SpeechT5HifiGan, SpeechT5HifiGanConfig
+
+from transformers import SpeechT5ForTextToSpeech
+
+from models.model import AiSynthModel
+from data.data_loader import CustomDataset, collate_fn
+
+
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+
+#init model
+batch_size=2
+train_dataset = CustomDataset(root_dir='data/processed/train')
+train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
+val_dataset = CustomDataset(root_dir='data/processed/val')
+val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
+
+
+wandb.init(
+    project="aisynth_pls",
+    name="vid2audio_pls",
+    job_type="training")
+
+
+config_vivit = VivitConfig()
+
+
+encoder = VivitModel.from_pretrained("google/vivit-b-16x2-kinetics400")#, add_pooling_layer=False)
+
+speecht5_model = SpeechT5ForTextToSpeech.from_pretrained("microsoft/speecht5_tts")
+
+decoder = speecht5_model.speecht5.decoder.wrapped_decoder
+decoder_postnet = speecht5_model.speech_decoder_postnet
+
+import gc
+speecht5_model.speecht5.encoder.cpu()
+del speecht5_model.speecht5.encoder
+gc.collect()
+torch.cuda.empty_cache()
+
+
+model = AiSynthModel(encoder, decoder, decoder_postnet, image_size=(224,224),tubelet_size=[2,8,32], num_frames = 32, dim = 512, num_layers=4).cuda()
+#opt
+
+model.load_state_dict(torch.load('ai_synth_model_2000.pth'))
+
+parameters = filter(lambda p: p.requires_grad, model.parameters())
+parameters = sum([np.prod(p.size()) for p in parameters]) / 1_000_000
+print('Trainable Parameters: %.3fM' % parameters)
+
+#optimizer = torch.optim.AdamW(model.parameters(),lr=1e-3, weight_decay=1e-2)
+optimizer = torch.optim.AdamW(#model.parameters(),
+    [
+        {"params": model.encoder.parameters(), "lr": 1e-4},
+        {"params": model.speech_t5_decoder.parameters(), "lr": 1e-4},
+        {"params": model.decoder_postnet.parameters(), "lr": 1e-4},
+        {"params": model.last_layer1.parameters(), "lr": 1e-4},
+    ]
+)
+scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
+
+#loss fun
+criterion = nn.L1Loss() #nn.CrossEntropyLoss() # no reason to use crossentropy if we dont work with classes...
+
+wandb.init(
+    project="test_aisynth_v2",
+    name="vid2audio",
+    job_type="training",
+    reinit=True)
+
+# %% Fit the model
+# Number of epochs
+epochs = 5
+train_losses = []
+val_losses = []
+step = 0
+val_interval=15
+save_interval=1000
+lr_update=1000
+#use tqdm to print train loss and val loss as updating instead of constantly printing
+
+val_loss = 10000
+for epoch in range(epochs):
+    train_epoch_loss =[]
+    val_epoch_loss =[]
+
+    with tqdm(total=len(train_loader), desc=f"Epoch {epoch+1}/{epochs} - Train") as pbar:
+
+        for dat in train_loader:
+
+            model.train()
+
+            out = model(dat['frames'])
+
+            loss = criterion(out, dat['wav'])
+            wandb.log({"train_loss": loss.detach().cpu().item()}, step=step)
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            train_epoch_loss.append(loss.detach().cpu())
+            pbar.set_postfix({'train_loss': f'{loss:.4f}','val_loss': f'{val_loss:.4f}'})
+            pbar.update()
+
+            if step % val_interval == 0:
+                with torch.no_grad():
+                    model.eval()
+
+                    val_dat = next(iter(val_loader))
+
+                    val_out = model(val_dat['frames'])
+
+                    #cross entropy loss for reconstructed wav and "ground truth" wav
+                    val_loss = criterion(torch.tensor(val_out), val_dat['wav'].detach().cpu())
+                    wandb.log({"val_loss": val_loss.detach().cpu().item()}, step=step)
+                    val_epoch_loss.append(val_loss.detach().cpu())
+            step += 1
+            if step % save_interval == 0:
+              torch.save(model.state_dict(),f'ai_synth_model_further_{step}.pth')
+
+            if step % lr_update == 0:
+              scheduler.step()
+
+    print(f'epoch train mean loss:{np.mean(train_epoch_loss)}')
+    print(f'epoch val mean loss:{np.mean(val_epoch_loss)}')
+    wandb.log({"train_loss": np.mean(train_epoch_loss)}, step=epoch)
+    wandb.log({"train_loss": np.mean(val_epoch_loss)}, step=epoch)
+

@@ -180,3 +180,9 @@ cython_debug/
 data/processed/
 data/raw/
 data.zip
+datap1.zip
+wandb/
+results/
+models/
+data_synth/
+databig.zip
