@@ -101,7 +101,8 @@ class SimpleModel(nn.Module):
         #self.mlp = torch.nn.Linear(128* 88, 88 * 55)
         self.mlp1 = torch.nn.Linear(256 * 64, 88 * 55)
 
-        self.activation = nn.Sigmoid()
+        #self.activation = nn.Sigmoid()
+
 
     def forward(self, x):
         B, F, C, H, W = x.shape
@@ -115,7 +116,7 @@ class SimpleModel(nn.Module):
         # x = self.pool(x).flatten(1)
         x = self.mlp1(x).reshape(B, 88, 55)
         #x = self.activation(x)
-        return x #torch.clip(x,max=10)
+        return x # torch.logit(x, eps=1e-9)  #torch.clip(x,max=10) ## raw logits trains, while sigmoid and logit does not...
 
 
 
@@ -141,35 +142,8 @@ if __name__ == "__main__":
     }
     config_vivit = VivitConfig(**vivit_dict)
 
-    conf_dict = {
-      "num_mel_bins": 88,
-      "activation_dropout": 0.1,
-      "attention_dropout": 0.1,
-      "decoder_attention_heads": 32,
-      "decoder_ffn_dim": 512,
-      "decoder_layerdrop": 0.1,
-      "decoder_layers": 2,
-      "decoder_start_token_id": 2,
-      "hidden_act": "gelu",
-      "hidden_dropout": 0.1,
-      "hidden_size": 512,
-      "is_encoder_decoder": True,
-      "layer_norm_eps": 1e-05,
-      "mask_feature_length": 4,
-      "mask_feature_min_masks": 0,
-      "mask_feature_prob": 0.0,
-      "mask_time_length": 4,
-      "mask_time_min_masks": 2,
-      "positional_dropout": 0.1,
-      "transformers_version": "4.40.1",
-      "use_guided_attention_loss": True,
-    }
     embeddings = VivitEmbeddings(config_vivit)
     encoder = VivitEncoder(config_vivit)
-    #config_speecht5 = SpeechT5Config(**conf_dict)
-
-    # decoder = SpeechT5Decoder(config_speecht5)
-    # decoder_postnet = SpeechT5SpeechDecoderPostnet(config_speecht5)
 
     model = SimpleModel(embeddings, encoder).cuda()
 

@@ -2,7 +2,7 @@
 #!/bin/sh
 #BSUB -q gpua100
 #BSUB -J model_train
-#BSUB -W 8:00
+#BSUB -W 3:00
 #BSUB -n 8
 #BSUB -R "rusage[mem=20GB]"
 #BSUB -gpu "num=1"
@@ -18,4 +18,4 @@ module load cuda/12.1
 
 cd /work3/s204161/adlcv-proj/ai-synth/
 
-python3 src/train_model.py
+python3 src/train_model_vivit.py
