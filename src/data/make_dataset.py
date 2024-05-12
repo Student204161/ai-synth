@@ -145,7 +145,7 @@ if __name__ == '__main__':
 
     count += 1
 
-#    check_video_files(f'././data/processed/{split}/midi',split=split)
+    check_video_files(f'././data/processed/{split}/midi',f'././data/processed/{split}/frames') # in case video creation fails for some clips
 
     save_to_pt(f'././data/processed/{split}/midi',seq_len=segm_length,split=split)
 
