@@ -309,6 +309,19 @@ def pad_tensor(tensor, target_shape):
     return tensor
 
 
+#used for real data creation... in case data generation not right.
+def check_video_files(path_to_midi_data, frames_dir):
+    count = 0
+    for root, dirs, files in os.walk(path_to_midi_data):
+        for file in files:
+            if file.endswith('.mid'):
+                midi_save_name = file.split('.')[0]
+                if not os.path.exists(os.path.join(frames_dir, midi_save_name)):
+                    count += 1
+                    print(f"Missing video file for {midi_save_name}. Deleting")
+                    os.remove(os.path.join(path_to_midi_data, file))
+
+    return count
 
 # collect all frames into a torch.tensor .pt file of size (N,302,360,32,1)
 
@@ -336,6 +349,7 @@ def save_to_pt(path_to_midi,split="train"):
 
                 frames = torch.stack(frames)
                 torch.save(frames, f'././data/processed/{split}/frames_pt/'+file.split('.')[0]+'.pt')
+
 
 def make_synthetic(N,split,max_notes=3):
 
@@ -400,6 +414,8 @@ def synth_create_vids_worker(split, midi_files, image_width, image_height, piano
                 split=split
             )
             pbar.update(1)
+
+
 
 def synth_create_vids(split, image_width=512, image_height=16, piano_height=16, segm_length=2, sample_rate=16000, fps=16, num_threads=8):
     # Find paths to all midi files
