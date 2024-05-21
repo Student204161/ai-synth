@@ -16,6 +16,29 @@ PYTHON_INTERPRETER = python
 # COMMANDS                                                                      #
 #################################################################################
 
+ROOT_DIR:=$(shell git rev-parse --show-toplevel)
+
+queue:
+	cd ${ROOT_DIR} && bsub < jobscript.sh
+
+stat:
+	@err_file=$$(ls -v gpu_*.err | tail -n 1); \
+	out_file=$$(ls -v gpu_*.out | tail -n 1); \
+	echo "Latest .err file: $$err_file"; \
+	echo "Latest .out file: $$out_file"; \
+
+space:
+	getquota_work3.sh
+
+hog:
+	du -h --max-depth=1 --apparent /work3/s222376/
+
+gpu:
+	@err_file=$$(ls -v gpu_*.err | tail -n 1); \
+	err_number=$$(echo $$err_file | grep -oP 'gpu_\K\d+(?=\.err)'); \
+	echo "Latest .err file: $$err_file with number $$err_number"; \
+	bnvtop $$err_number; \
+
 ## Set up python interpreter environment
 create_environment:
 	conda create --name $(PROJECT_NAME) python=$(PYTHON_VERSION) --no-default-packages -y
